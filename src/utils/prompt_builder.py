@@ -51,12 +51,11 @@ def get_trend_narrative(price: float, ema_fast: float, ema_slow: float) -> tuple
     
     return trend_narrative, ema_alignment
 
-def build_market_prompt(symbol, tech_data, sentiment_data, onchain_data, pattern_analysis=None, dual_scenarios=None, show_btc_context=True):
+def build_market_prompt(symbol, tech_data, sentiment_data, onchain_data, pattern_analysis=None, show_btc_context=True):
     """
     Menyusun prompt untuk AI berdasarkan data teknikal, sentimen, dan on-chain.
     Struktur Baru: Multi-Timeframe (Macro -> Setup -> Execution).
     Args:
-        dual_scenarios (dict): Result dari calculate_dual_scenarios(), berisi {"long": {...}, "short": {...}}.
         show_btc_context (bool): Jika False, data BTC dan korelasinya akan DISEMBUNYIKAN total dari AI.
     """
     
@@ -190,39 +189,28 @@ def build_market_prompt(symbol, tech_data, sentiment_data, onchain_data, pattern
         btc_instruction = f"IMPORTANT: High BTC Correlation ({btc_corr:.2f}). Do NOT open positions against BTC Trend ({btc_trend})."
 
     # ==========================================
-    # 2.5 DUAL TRADE SCENARIOS (Long vs Short)
+    # 2.5 EXECUTION INSTRUCTION (AI CALCULATED)
     # ==========================================
-    execution_options_str = "N/A"
-    if dual_scenarios:
-        long_s = dual_scenarios.get('long', {})
-        short_s = dual_scenarios.get('short', {})
-        
-        long_m = long_s.get('market', {})
-        long_h = long_s.get('liquidity_hunt', {})
-        short_m = short_s.get('market', {})
-        short_h = short_s.get('liquidity_hunt', {})
-        
-        if config.ENABLE_MARKET_ORDERS:
-            # Full Mode: Show both Aggressive (Market) and Passive (Limit) for each direction
-            execution_options_str = f"""
-[EXECUTION SCENARIOS]
-SCENARIO A: Buy/Long Setup
-  > Option A1 (Aggressive/Market): Entry={format_price(long_m.get('entry', 0))}, SL={format_price(long_m.get('sl', 0))}, TP={format_price(long_m.get('tp', 0))}, R:R=1:{long_m.get('rr', 0)}
-  > Option A2 (Passive/Limit): Entry={format_price(long_h.get('entry', 0))}, SL={format_price(long_h.get('sl', 0))}, TP={format_price(long_h.get('tp', 0))}, R:R=1:{long_h.get('rr', 0)}
+    execution_instruction_str = f"""
+[EXECUTION STRATEGY CALCULATION]
+Berdasarkan strategi yang kamu pilih, HITUNG sendiri angka-angka berikut:
 
-SCENARIO B: Sell/Short Setup
-  > Option B1 (Aggressive/Market): Entry={format_price(short_m.get('entry', 0))}, SL={format_price(short_m.get('sl', 0))}, TP={format_price(short_m.get('tp', 0))}, R:R=1:{short_m.get('rr', 0)}
-  > Option B2 (Passive/Limit): Entry={format_price(short_h.get('entry', 0))}, SL={format_price(short_h.get('sl', 0))}, TP={format_price(short_h.get('tp', 0))}, R:R=1:{short_h.get('rr', 0)}
-"""
-        else:
-            # Passive Only Mode: Show only Liquidity Hunt for each direction
-            execution_options_str = f"""
-[EXECUTION SCENARIOS]
-SCENARIO A: Buy/Long Setup
-  > Entry={format_price(long_h.get('entry', 0))}, SL={format_price(long_h.get('sl', 0))}, TP={format_price(long_h.get('tp', 0))}, R:R=1:{long_h.get('rr', 0)}
+1. **ENTRY PRICE**: Dari mana kamu akan masuk posisi?
+   - Untuk MARKET order: Gunakan current price {format_price(price)}
+   - Untuk LIMIT order: Tentukan harga limit yang strategis (contoh: di area S1/R1 untuk liquidity hunt)
 
-SCENARIO B: Sell/Short Setup
-  > Entry={format_price(short_h.get('entry', 0))}, SL={format_price(short_h.get('sl', 0))}, TP={format_price(short_h.get('tp', 0))}, R:R=1:{short_h.get('rr', 0)}
+2. **STOP LOSS (SL)**: Harga stop loss yang ketat tapi aman
+   - Gunakan ATR ({atr:.5f}) sebagai referensi volatilitas
+   - Untuk Liquidity Hunt: SL sedikit di bawah/atas sweep zone
+   - Untuk Pullback: SL di bawah/atas EMA support/resistance
+   
+3. **TAKE PROFIT (TP)**: Target profit realistis
+   - Minimal Risk:Reward ratio 1:{config.MIN_RISK_REWARD_RATIO}
+   - Pertimbangkan resistance/support terdekat
+   
+RUMUS REFERENSI (kamu bebas modifikasi based on condition):
+- SL Distance = ATR x {config.ATR_MULTIPLIER_SL}
+- TP Distance = ATR x {config.ATR_MULTIPLIER_TP1}
 """
 
     # ==========================================
@@ -248,8 +236,6 @@ SCENARIO B: Sell/Short Setup
     if raw_stats_str:
         pattern_section_content += f"{raw_stats_str}\n"
     
-
-
     # ==========================================
     # 3. PROMPT CONSTRUCTION
     # ==========================================
@@ -367,7 +353,7 @@ TASK: Analyze market data for {symbol} using the Multi-Timeframe logic below. De
 - Price vs S1: {price_vs_s1}
 - Price vs R1: {price_vs_r1}
 - Wick Rejection (Last 5 Candles): {wick_str}
-- NOTE: Strong rejection (>2x body) near S1/R1 suggests potential reversal.
+- NOTE: Strong rejection (>{config.WICK_REJECTION_MULTIPLIER}x body) near S1/R1 suggests potential reversal.
 
 [VOLATILITY & VOLUME]
 - Bollinger Bands: Upper={format_price(bb_upper)}, Lower={format_price(bb_lower)}
@@ -375,8 +361,8 @@ TASK: Analyze market data for {symbol} using the Multi-Timeframe logic below. De
 - Volume: {volume} | Avg: {vol_ma} | Ratio: {vol_ratio:.2f}x {'✓ SPIKE' if vol_meets_threshold else '✗ NORMAL'}
 
 [ORDER BOOK DEPTH]
-- Depth (2%): {ob_imp}
-- NOTE: Significant Imbalance (>20%) suggests potential Liquidity Hunt or Breakout.
+- Depth ({config.ORDERBOOK_RANGE_PERCENT*100:.0f}%): {ob_imp}
+- NOTE: Significant Imbalance (>{config.ORDERBOOK_IMBALANCE_THRESHOLD}%) suggests potential Liquidity Hunt or Breakout.
 
 [MARKET DATA]
 - Funding Rate: {funding_rate:.6f}%
@@ -397,7 +383,7 @@ TASK: Analyze market data for {symbol} using the Multi-Timeframe logic below. De
 
 {strat_str}
 
-{execution_options_str}
+{execution_instruction_str}
 
 FINAL INSTRUCTIONS (STRATEGY SELECTION PROTOCOL):
 {btc_instruction_prompt}
@@ -438,6 +424,9 @@ OUTPUT FORMAT (JSON ONLY):
   "selected_strategy": "NAME OF STRATEGY",
   "execution_mode": { '"MARKET" | "LIMIT"' if config.ENABLE_MARKET_ORDERS else '"LIMIT"' },
   "decision": "BUY" | "SELL" | "WAIT",
+  "entry_price": <float>,
+  "tp_price": <float>,
+  "sl_price": <float>,
   "reason": "Explain your logic in INDONESIAN language, referencing specific macro and micro factors.",
   "confidence": 0-100,
   "risk_level": "LOW" | "MEDIUM" | "HIGH"

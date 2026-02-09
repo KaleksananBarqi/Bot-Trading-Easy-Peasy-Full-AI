@@ -51,7 +51,7 @@ def _calculate_market_structure_static(bars, lookback=5):
     Menggunakan scipy.signal.argrelextrema.
     """
     try:
-        if len(bars) < 50: return "INSUFFICIENT_DATA"
+        if len(bars) < config.MARKET_STRUCTURE_MIN_BARS: return "INSUFFICIENT_DATA"
 
         df = pd.DataFrame(bars, columns=['timestamp','open','high','low','close','volume'])
 
@@ -133,9 +133,9 @@ def _calculate_wick_rejection_static(bars, lookback=5):
             body_ref = body if body > 0 else (hi - lo) * 0.01
             if body_ref == 0: body_ref = 0.00000001
 
-            # Logic: Wick must be > 2x Body
-            is_bullish = lower_wick > (body * 2.0)
-            is_bearish = upper_wick > (body * 2.0)
+            # Logic: Wick must be > N x Body (Configurable)
+            is_bullish = lower_wick > (body * config.WICK_REJECTION_MULTIPLIER)
+            is_bearish = upper_wick > (body * config.WICK_REJECTION_MULTIPLIER)
 
             # Determine strength
             current_strength_bull = lower_wick / body_ref
@@ -406,7 +406,7 @@ class MarketDataManager:
         while True:
             await self.get_listen_key()
             if not self.listen_key:
-                await asyncio.sleep(5)
+                await asyncio.sleep(config.WS_RECONNECT_DELAY)
                 continue
                 
             streams = [self.listen_key]
@@ -486,7 +486,7 @@ class MarketDataManager:
                                 
             except Exception as e:
                 logger.warning(f"⚠️ WS Disconnected: {e}. Reconnecting...")
-                await asyncio.sleep(5)
+                await asyncio.sleep(config.WS_RECONNECT_DELAY)
 
     async def _maintain_slow_data(self):
         """

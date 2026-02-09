@@ -138,7 +138,7 @@ class OrderExecutor:
         return False
 
     # --- EXECUTION LOGIC ---
-    async def execute_entry(self, symbol, side, order_type, price, amount_usdt, leverage, strategy_tag, atr_value=0):
+    async def execute_entry(self, symbol, side, order_type, price, amount_usdt, leverage, strategy_tag, atr_value=0, sl_price=0, tp_price=0):
         """
         Eksekusi open posisi (Market/Limit).
         """
@@ -180,7 +180,9 @@ class OrderExecutor:
                     "created_at": time.time(),
                     "expires_at": time.time() + config.LIMIT_ORDER_EXPIRY_SECONDS,
                     "strategy": strategy_tag,
-                    "atr_value": atr_value # Save ATR for Safety Calculation
+                    "atr_value": atr_value, # Save ATR for Safety Calculation
+                    "ai_sl_price": sl_price,
+                    "ai_tp_price": tp_price
                 }
                 await self.save_tracker()
                 await kirim_tele(f"⏳ <b>LIMIT PLACED ({strategy_tag})</b>\n{symbol} {side} @ {price_exec:.4f}\n(Trap SL set by ATR: {atr_value:.4f})")
@@ -193,6 +195,8 @@ class OrderExecutor:
                     "status": "PENDING", 
                     "strategy": strategy_tag,
                     "atr_value": atr_value,
+                    "ai_sl_price": sl_price,
+                    "ai_tp_price": tp_price,
                     "created_at": time.time()
                 }
                 await self.save_tracker()
@@ -233,10 +237,20 @@ class OrderExecutor:
             tracker_data = self.safety_orders_tracker.get(symbol, {})
             atr_val = tracker_data.get('atr_value', 0)
             
+            # [NEW] Check for AI-Provided Setup
+            ai_sl = tracker_data.get('ai_sl_price', 0)
+            ai_tp = tracker_data.get('ai_tp_price', 0)
+            
             sl_price = 0
             tp_price = 0
             
-            if atr_val > 0:
+            if ai_sl > 0 and ai_tp > 0:
+                # 🎯 USE AI SETUP DIRECTLY
+                sl_price = ai_sl
+                tp_price = ai_tp
+                logger.info(f"🤖 Using AI-Provided Safety Orders: SL {sl_price} | TP {tp_price}")
+            
+            elif atr_val > 0:
                 # --- DYNAMIC ATR LOGIC (LIQUIDITY HUNT / TREND TRAP) ---
                 # SL = Configured ATR (TRAP_SAFETY_SL)
                 # TP = Configured ATR (ATR_MULTIPLIER_TP1)
@@ -569,7 +583,7 @@ class OrderExecutor:
                         
                         await kirim_tele(
                             f"⏰ <b>ORDER EXPIRED</b>\n"
-                            f"Limit Order {symbol} dibatalkan karena timeout > 2 jam.\n"
+                            f"Limit Order {symbol} dibatalkan karena timeout > {config.LIMIT_ORDER_EXPIRY_SECONDS/3600:.1f} jam.\n"
                             f"Tracker cleaned."
                         )
                         return # Skip further checks since we removed it

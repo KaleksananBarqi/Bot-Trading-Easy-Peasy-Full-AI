@@ -8,7 +8,7 @@ import ccxt.async_support as ccxt
 import config
 from src.utils.helper import logger, kirim_tele, kirim_tele_sync, parse_timeframe_to_seconds, get_next_rounded_time, get_coin_leverage
 from src.utils.prompt_builder import build_market_prompt, build_sentiment_prompt
-from src.utils.calc import calculate_trade_scenarios, calculate_dual_scenarios, calculate_profit_loss_estimation
+from src.utils.calc import calculate_profit_loss_estimation, validate_ai_setup
 
 # MODULE IMPORTS
 from src.modules.market_data import MarketDataManager
@@ -60,16 +60,9 @@ async def safety_monitor_loop():
                         })
                         await executor.save_tracker()
 
-            # Sleep agak lama karena load utama sudah di WebSocket
-            await asyncio.sleep(60) 
-            
         except Exception as e:
             logger.error(f"Error Safety Loop: {e}")
-            await asyncio.sleep(60)
-            
-        except Exception as e:
-            logger.error(f"Safety Loop Error: {e}")
-            await asyncio.sleep(config.ERROR_SLEEP_DELAY)
+            await asyncio.sleep(config.SAFETY_MONITOR_ERROR_DELAY)
 
 async def trailing_price_handler(symbol, price):
     """Callback untuk menangani update harga realtime dari WebSocket"""
@@ -334,8 +327,8 @@ async def main():
                             drivers_str = "\n".join([f"• {d}" for d in drivers])
                             
                             icon = "😐"
-                            if score > 60: icon = "🚀"
-                            elif score < 40: icon = "🐻"
+                            if score > config.SENTIMENT_BULLISH_THRESHOLD: icon = "🚀"
+                            elif score < config.SENTIMENT_BEARISH_THRESHOLD: icon = "🐻"
                             
                             msg = (
                                 f"📢 <b>PASAR SAAT INI {mood} {icon}</b>\n"
@@ -415,12 +408,13 @@ async def main():
                 
                 # [LOGIC UPDATE] Cek Konfigurasi BTC Correlation Per-Koin
                 use_btc_corr_config = coin_cfg.get('btc_corr', True)  # Default True
-                show_btc_context = False
+                
+                # Default show_btc_context berdasarkan threshold
+                show_btc_context = btc_corr >= config.CORRELATION_THRESHOLD_BTC
 
                 if use_btc_corr_config:
-                    if btc_corr >= config.CORRELATION_THRESHOLD_BTC:
+                    if show_btc_context:
                         # High Correlation: Show BTC Data & Enforce Trend Following
-                        show_btc_context = True  # Allow AI to see BTC
                         
                         if tech_data['btc_trend'] == "BULLISH" and tech_data['price_vs_ema'] == "Above":
                             is_interesting = True
@@ -430,7 +424,6 @@ async def main():
                             pass  # Conflicting signal (e.g. BTC Bullish but Altcoin Below EMA) -> Skip
                     else:
                         # Low Correlation: Hide BTC Data (Prevent Hallucination)
-                        show_btc_context = False
                         # Allow entry based on independent structure
                         is_interesting = True
                 else:
@@ -485,130 +478,155 @@ async def main():
             # Order Book Depth Analysis (Scalping Context)
             ob_depth = await market_data.get_order_book_depth(symbol)
             tech_data['order_book'] = ob_depth
+            # ==============================================================================
+            # 6. GENERATE AI SIGNAL
+            # ==============================================================================
             
-            tech_data['btc_correlation'] = btc_corr
+            # [OPTIMIZED] Logic show_btc_context sudah dihandle di atas (Filter 1)
+            # Tidak perlu ditimpa lagi di sini untuk konsistensi logic.
+
             
-            # Calculate Trade Scenarios BEFORE AI Call
-            # AI need to know what "Market" vs "Liquidity Hunt" looks like
-            current_price = tech_data['price']
-            
-            # [NEW] Generate BOTH Long AND Short Scenarios for Neutral Prompt
-            # AI will decide direction based on its own analysis, not pre-guessed bias
-            dual_scenarios = calculate_dual_scenarios(
-                price=current_price,
-                atr=tech_data.get('atr', 0)
+            # Build Prompt
+            prompt = build_market_prompt(
+                symbol, tech_data, sentiment_data, onchain_data, 
+                pattern_ctx, 
+                show_btc_context=show_btc_context
             )
-
-            prompt = build_market_prompt(symbol, tech_data, sentiment_data, onchain_data, pattern_ctx, dual_scenarios, show_btc_context=show_btc_context)
             
-            # Print Prompt for Debugging
-            logger.info(f"📝 AI PROMPT INPUT for {symbol}:\n{prompt}")
+            if not prompt:
+                logger.error(f"❌ Failed to build prompt for {symbol}")
+                continue
 
+            # Call AI
             ai_decision = await ai_brain.analyze_market(prompt)
-            
-            # Update Timestamp (Candle ID) instead of System Time
-            analyzed_candle_ts[symbol] = current_candle_ts
             
             decision = ai_decision.get('decision', 'WAIT').upper()
             confidence = ai_decision.get('confidence', 0)
-            reason = html.escape(str(ai_decision.get('reason', '')))
-
-            # --- STEP E: EXECUTION ---
-            if decision in ['BUY', 'SELL', 'LONG', 'SHORT']:
-                # Mapping AI Output
-                side = 'buy' if decision in ['BUY', 'LONG'] else 'sell'
+            reason = ai_decision.get('reason', 'No reason provided.')
+            strategy_mode = ai_decision.get('selected_strategy', 'UNKNOWN')
+            
+            # ==============================================================================
+            # 7. EXECUTE DECISION
+            # ==============================================================================
+            
+            if decision in ['BUY', 'SELL']:
+                if confidence < config.AI_CONFIDENCE_THRESHOLD:
+                    logger.info(f"⏭️ Skipped {symbol}: Low Confidence ({confidence}%)")
+                    continue
+                    
+                side = decision.lower()
                 
-                # Get Strategy Selected by AI
-                strategy_mode = ai_decision.get('selected_strategy', 'STANDARD')
-
-                if confidence >= config.AI_CONFIDENCE_THRESHOLD:
-                    # Execute!
-                    lev = coin_cfg.get('leverage', config.DEFAULT_LEVERAGE)
-                    
-                    # Dynamic Sizing
-                    dynamic_amt = await executor.calculate_dynamic_amount_usdt(symbol, lev)
-                    if dynamic_amt:
-                        amt = dynamic_amt
-                        logger.info(f"💰 Dynamic Size: ${amt:.2f} (Risk {config.RISK_PERCENT_PER_TRADE}%)")
-                    else:
-                        amt = coin_cfg.get('amount', config.DEFAULT_AMOUNT_USDT)
-                    
-                    # EXECUTION LOGIC UPDATE
-                    # 1. Determine Mode from AI
-                    exec_mode = ai_decision.get('execution_mode', 'MARKET').upper()
-                    
-                    # 2. Use CACHED Dual Scenarios (Already calculated before AI call)
-                    # Select Long or Short based on AI decision
-                    params = dual_scenarios['long'] if side == 'buy' else dual_scenarios['short']
-                    
-                    # 3. Select Parameters
-                    final_setup = {}
-                    order_type = 'market'
-                    
-                    if exec_mode == 'LIMIT' and params.get('liquidity_hunt'):
-                        # Apply Liquidity Hunt (Limit Order) Logic
-                        order_type = 'limit'
-                        mode_data = params['liquidity_hunt']
-                        entry_price = mode_data['entry']
-                        sl_price = mode_data['sl']
-                        tp_price = mode_data['tp']
-                        logger.info(f"🔫 Limit Setup Selected. Entry @ {entry_price:.4f}")
-                    else:
-                        # Default / Market Logic
-                        # [MODIFIED] Check Config First
-                        if not config.ENABLE_MARKET_ORDERS:
-                             # FORCE FALLBACK TO LIMIT
-                             order_type = 'limit'
-                             mode_data = params.get('liquidity_hunt', params['market'])
-                             entry_price = mode_data.get('entry', tech_data['price'])
-                             sl_price = mode_data['sl']
-                             tp_price = mode_data['tp']
-                             logger.info(f"🛡️ Market Order Disabled. Forcing Limit Order @ {entry_price:.4f}")
-                             exec_mode = 'LIMIT (FORCED)'
-                        else:
-                             order_type = 'market'
-                             mode_data = params['market']
-                             entry_price = tech_data['price'] # Market order uses current price roughly
-                             sl_price = mode_data['sl']
-                             tp_price = mode_data['tp']
-
-                    rr_ratio = abs(tp_price - entry_price) / abs(entry_price - sl_price) if abs(entry_price - sl_price) > 0 else 0
-                    
-                    # Formatting Message
-                    margin_usdt = amt
-                    position_size_usdt = amt * lev
-                    direction_icon = "🟢" if side == 'buy' else "🔴"
-                    
-                    # [NEW] Calculate Profit/Loss Estimation
-                    pnl_est = calculate_profit_loss_estimation(
-                        entry_price=entry_price,
-                        tp_price=tp_price,
-                        sl_price=sl_price,
-                        side=side,
-                        amount_usdt=amt,
-                        leverage=lev
+                # EXECUTION LOGIC: GUNAKAN ANGKA DARI AI (AI-ONLY MODE)
+                exec_mode = ai_decision.get('execution_mode', 'MARKET').upper()
+                
+                # === Ambil setup dari AI ===
+                entry_price = float(ai_decision.get('entry_price', 0))
+                tp_price = float(ai_decision.get('tp_price', 0))
+                sl_price = float(ai_decision.get('sl_price', 0))
+                
+                # === [VALIDATION 1] Cek kelengkapan setup ===
+                if entry_price <= 0 or tp_price <= 0 or sl_price <= 0:
+                    logger.error(f"❌ AI tidak memberikan setup lengkap untuk {symbol}. ORDER DIBATALKAN.")
+                    await kirim_tele(
+                        f"❌ <b>AI SETUP INCOMPLETE</b>\n"
+                        f"{symbol}\n\n"
+                        f"AI gagal memberikan entry/TP/SL yang lengkap.\n"
+                        f"Entry: {entry_price}\n"
+                        f"TP: {tp_price}\n"
+                        f"SL: {sl_price}\n\n"
+                        f"Order dibatalkan untuk keamanan.",
+                        alert=True
                     )
-                    
-                    # [MESSAGE UPDATE] Conditional BTC Lines
-                    btc_trend_icon = "🟢" if tech_data['btc_trend'] == "BULLISH" else "🔴"
-                    btc_corr_icon = "🔒" if btc_corr >= config.CORRELATION_THRESHOLD_BTC else "🔓"
-                    
+                    continue  # Skip execution
+
+                # === [VALIDATION 2] Validasi logika setup ===
+                validation = validate_ai_setup(
+                    entry_price=entry_price,
+                    tp_price=tp_price,
+                    sl_price=sl_price,
+                    side=side,
+                    current_price=tech_data['price'],
+                    atr=tech_data.get('atr', 1.0), # Fallback ATR
+                    min_rr_ratio=config.MIN_RISK_REWARD_RATIO
+                )
+
+                if not validation['is_valid']:
+                    logger.error(f"❌ AI Setup INVALID for {symbol}: {validation['errors']}")
+                    await kirim_tele(
+                        f"❌ <b>AI SETUP VALIDATION FAILED</b>\n"
+                        f"{symbol}\n\n"
+                        f"Errors:\n" +
+                        "\n".join([f"• {e}" for e in validation['errors']]) +
+                        f"\n\nOrder dibatalkan.",
+                        alert=True
+                    )
+                    continue  # Skip execution
+
+                # === [VALIDATION 3] Log warnings (jika ada) ===
+                if validation['warnings']:
+                    logger.warning(f"⚠️ AI Setup Warnings for {symbol}:")
+                    for w in validation['warnings']:
+                        logger.warning(f"  - {w}")
+                        
+                # Prepare Execution Parameters
+                order_type = 'market' if exec_mode == 'MARKET' else 'limit'
+                
+                # Determine Position Size
+                balance = await executor.get_available_balance()
+                
+                # Check dynamic sizing logic if enabled
+                if config.USE_DYNAMIC_SIZE:
+                    calc_size = await executor.calculate_dynamic_amount_usdt(symbol, config.LEVERAGE_DEFAULT)
+                    if calc_size:
+                        amount_usdt = calc_size
+                    else:
+                         amount_usdt = config.POSITION_SIZE_USDT
+                else:
+                    amount_usdt = config.POSITION_SIZE_USDT
+                
+                # Calculate Estimated PnL (For Notification)
+                # FIX: Urutan argumen disesuaikan dengan definisi di calc.py
+                # def calculate_profit_loss_estimation(entry_price, tp_price, sl_price, side, amount_usdt, leverage)
+                pnl_est = calculate_profit_loss_estimation(
+                    entry_price, 
+                    tp_price, 
+                    sl_price, 
+                    side, 
+                    amount_usdt, 
+                    config.LEVERAGE_DEFAULT
+                )
+                rr_ratio = validation['risk_reward']
+                
+                # Execute
+                order_id = await executor.execute_entry(
+                    symbol=symbol,
+                    side=side,
+                    order_type=order_type,
+                    price=entry_price,
+                    amount_usdt=amount_usdt,
+                    leverage=config.LEVERAGE_DEFAULT,
+                    strategy_tag=strategy_mode
+                )
+                
+                if order_id:
+                    # Notification
                     btc_lines = ""
-                    if config.USE_BTC_CORRELATION:
-                        btc_lines = (f"BTC Trend: {btc_trend_icon} {tech_data['btc_trend']}\n"
-                                     f"BTC Correlation: {btc_corr_icon} {btc_corr:.2f}\n")
+                    if show_btc_context:
+                        btc_lines = f"BTC Corr: {tech_data['btc_correlation']:.2f}\n"
 
+                    direction_icon = "🟢" if decision == "BUY" else "🔴"
+                    
                     # Execution Type Header
-                    type_str = "🚀 AGRESSIVE (MARKET)" if order_type == 'market' else "🪤 PASSIVE (LIQUIDITY HUNT)"
-
+                    type_str = "🚀 AGGRESSIVE (MARKET)" if order_type == 'market' else "🪤 PASSIVE (LIMIT)"
+                    
                     msg = (f"🧠 <b>AI SIGNAL MATCHED</b>\n"
-                           f"{type_str}\n\n"
+                           f"{type_str} | 🤖 AI-Calculated\n\n"
                            f"Coin: {symbol}\n"
                            f"Signal: {direction_icon} {decision} ({confidence}%)\n"
                            f"Timeframe: {config.TIMEFRAME_EXEC}\n"
                            f"{btc_lines}"
                            f"Strategy: {strategy_mode}\n\n"
-                           f"🛒 <b>Order Details:</b>\n"
+                           f"🛒 <b>Order Details (AI Setup):</b>\n"
                            f"• Type: {order_type.upper()}\n"
                            f"• Entry: {entry_price:.4f}\n"
                            f"• TP: {tp_price:.4f}\n"
@@ -617,32 +635,21 @@ async def main():
                            f"📈 <b>Estimasi Hasil:</b>\n"
                            f"• Jika TP: <b>+${pnl_est['profit_usdt']:.2f}</b> (+{pnl_est['profit_percent']:.2f}%)\n"
                            f"• Jika SL: <b>-${pnl_est['loss_usdt']:.2f}</b> (-{pnl_est['loss_percent']:.2f}%)\n\n"
-                           f"💰 <b>Size & Risk:</b>\n"
-                           f"• Margin: ${margin_usdt:.2f}\n"
-                           f"• Size: ${position_size_usdt:.2f} (x{lev})\n\n"
+                           f"💰 <b>Size:</b> ${amount_usdt} (x{config.LEVERAGE_DEFAULT})\n\n"
                            f"📝 <b>Reason:</b>\n"
                            f"{reason}\n\n"
                            f"⚠️ <b>Disclaimer:</b>\n"
-                           f"• Sinyal dibuat oleh AI dari berbagai sumber, tetap DYOR & SUYBI (Sayangi Uangmu Yang Berharga Itu).\n"
-                           f"• Pattern recognition by {config.AI_VISION_MODEL}\n"
-                           f"• Final analyze & execution by {config.AI_MODEL_NAME}")
-                    
-                    logger.info(f"📤 Sending Tele Message:\n{msg}")
+                           f"• Setup FULLY AI-driven. Validated R:R > {config.MIN_RISK_REWARD_RATIO}.\n"
+                           f"• Model: {config.AI_MODEL_NAME}")
+                           
                     await kirim_tele(msg)
                     
-                    atr_val = tech_data.get('atr', 0)
-                    await executor.execute_entry(
-                        symbol=symbol,
-                        side=side,
-                        order_type=order_type,
-                        price=entry_price,
-                        amount_usdt=amt,
-                        leverage=lev,
-                        strategy_tag=f"AI_{strategy_mode}_{exec_mode}",
-                        atr_value=atr_val 
-                    )
-                else:
-                    logger.info(f"🛑 AI Vote Low Confidence: {confidence}% (Need {config.AI_CONFIDENCE_THRESHOLD}%)")
+                    # Cooldown
+                    # ... (existing cooldown logic) ...
+        
+            # Update Timestamp (Candle ID) instead of System Time
+            analyzed_candle_ts[symbol] = current_candle_ts
+
 
             # Rate Limit Protection
             await asyncio.sleep(config.ERROR_SLEEP_DELAY) 

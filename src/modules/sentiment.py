@@ -1,4 +1,3 @@
-import requests
 import feedparser
 import random
 import asyncio
@@ -36,21 +35,21 @@ class SentimentAnalyzer:
                 if base not in self._base_keywords:
                     self._base_keywords[base] = (i, kw)
 
-    def fetch_fng(self):
-        """Fetch Fear & Greed Index from CoinMarketCap"""
+    async def fetch_fng(self):
+        """Fetch Fear & Greed Index from CoinMarketCap (Async)"""
         try:
             headers = {
                 'X-CMC_PRO_API_KEY': config.CMC_API_KEY,
                 'Accept': 'application/json'
             }
-            params = {}
             
             if not config.CMC_API_KEY:
                 logger.warning("⚠️ CMC_API_KEY not found. Using default neutral sentiment.")
                 return
 
-            resp = requests.get(self.fng_url, headers=headers, params=params, timeout=config.API_REQUEST_TIMEOUT)
-            data = resp.json()
+            async with aiohttp.ClientSession() as session:
+                async with session.get(self.fng_url, headers=headers, timeout=config.API_REQUEST_TIMEOUT) as resp:
+                    data = await resp.json()
             
             if 'status' in data and int(data['status']['error_code']) == 0 and 'data' in data:
                 if isinstance(data['data'], list) and len(data['data']) > 0:
@@ -291,6 +290,6 @@ class SentimentAnalyzer:
     async def update_all(self):
         """Update semua data sentiment secara concurrent."""
         await asyncio.gather(
-            asyncio.to_thread(self.fetch_fng),  # FnG tetap sync, di-offload ke thread
-            self.fetch_news()  # RSS sudah async
+            self.fetch_fng(),  # Sekarang sudah async
+            self.fetch_news()
         )

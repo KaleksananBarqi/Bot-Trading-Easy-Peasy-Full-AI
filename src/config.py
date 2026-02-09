@@ -30,7 +30,7 @@ CMC_API_KEY = os.getenv("CMC_API_KEY")     # CoinMarketCap
 # ==============================================================================
 # ⚙️ PENGATURAN SISTEM & APLIKASI
 # ==============================================================================
-PAKAI_DEMO = False               # False = Real Money, True = Testnet (Uang Monopoly)
+PAKAI_DEMO = True               # False = Real Money, True = Testnet (Uang Monopoly)
 LOG_FILENAME = 'bot_trading.log'
 TRACKER_FILENAME = 'safety_tracker.json'
 
@@ -221,11 +221,34 @@ STABLECOIN_INFLOW_THRESHOLD_PERCENT = 0.05 # Ambang batas aliran masuk stablecoi
 
 # Order Book Analysis
 ORDERBOOK_RANGE_PERCENT = 0.02   # Range depth analysis order book (2%)
+ORDERBOOK_IMBALANCE_THRESHOLD = 20 # Minimal imbalance (20%) untuk dianggap signifikan
 
 # Mekanisme Pendinginan (Anti-FOMO/Anti-Revenge)
 COOLDOWN_IF_PROFIT = 3600        # Jeda trading di koin ini jika PROFIT (detik)
 COOLDOWN_IF_LOSS = 7200          # Jeda trading di koin ini jika LOSS (detik)
 
+# Safety Monitor & System Health
+SAFETY_MONITOR_INTERVAL = 60     # Interval pengecekan safety monitor (detik)
+SAFETY_MONITOR_ERROR_DELAY = 60  # Delay jika terjadi error di safety monitor (detik)
+WS_RECONNECT_DELAY = 5           # Delay sebelum reconnect WebSocket (detik)
+
+# Market Structure & Pattern
+MARKET_STRUCTURE_MIN_BARS = 50   # Minimal candle untuk analisa struktur pasar
+WICK_REJECTION_MULTIPLIER = 2.0  # Wick harus > N kali Body untuk dianggap rejection
+
+# AI Sentiment Thresholds
+SENTIMENT_BULLISH_THRESHOLD = 60 # Score > 60 = Bullish
+SENTIMENT_BEARISH_THRESHOLD = 40 # Score < 40 = Bearish
+AI_SENTIMENT_TEMPERATURE = 0.3   # Kreativitas AI untuk sentimen
+
+# Definisikan Konstanta Utama yang Hilang (Penting!)
+POSITION_SIZE_USDT = DEFAULT_AMOUNT_USDT  # Mapping ke variable yang sudah ada
+LEVERAGE_DEFAULT = DEFAULT_LEVERAGE       # Mapping ke variable yang sudah ada
+# ==============================================================================
+# 🎯 AI SETUP VALIDATION
+# ==============================================================================
+MIN_RISK_REWARD_RATIO = 1.5         # Minimal R:R yang diterima dari AI (1:1.5)
+MAX_SL_DISTANCE_PERCENT = 0.10      # Maksimal jarak SL dari entry (10%)
 
 
 # ==============================================================================

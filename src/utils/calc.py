@@ -1,110 +1,71 @@
 from typing import Dict, Any
 import config
 
-def calculate_trade_scenarios(
-    price: float, 
-    atr: float, 
-    side: str, 
-    precision: int = 4
+
+def validate_ai_setup(
+    entry_price: float,
+    tp_price: float, 
+    sl_price: float,
+    side: str,
+    current_price: float,
+    atr: float,
+    min_rr_ratio: float = 1.0
 ) -> Dict[str, Any]:
     """
-    Menghitung skenario trade untuk Market (Aggressive) vs Liquidity Hunt (Passive).
+    Validasi apakah setup dari AI masuk akal secara matematis.
     
-    Args:
-        price (float): Harga saat ini (Current Price).
-        atr (float): Nilai ATR saat ini.
-        side (str): 'BUY' atau 'SELL'.
-        precision (int): Desimal untuk pembulatan harga.
-        
     Returns:
-        dict: {
-            "market": {entry, sl, tp, rr},
-            "liquidity_hunt": {entry, sl, tp, rr}
+        {
+            "is_valid": bool,
+            "errors": [],
+            "warnings": [],
+            "risk_reward": float
         }
     """
-    scenarios = {}
+    errors = []
+    warnings = []
     
-    # --- 1. MARKET SCENARIO (Aggressive) ---
-    # Entry: Current Price
-    # SL: Price - (ATR * SL_Multiplier)
-    # TP: Price + (ATR * TP_Multiplier)
+    # 1. Basic validation
+    if entry_price <= 0 or tp_price <= 0 or sl_price <= 0:
+        errors.append("Entry/TP/SL must be greater than 0")
+        return {"is_valid": False, "errors": errors, "warnings": warnings, "risk_reward": 0}
     
-    m_entry = price
-    m_dist_sl = atr * config.ATR_MULTIPLIER_SL
-    m_dist_tp = atr * config.ATR_MULTIPLIER_TP1
+    # 2. Direction validation
+    if side.lower() == 'buy':
+        if tp_price <= entry_price:
+            errors.append(f"BUY: TP ({tp_price}) must be > Entry ({entry_price})")
+        if sl_price >= entry_price:
+            errors.append(f"BUY: SL ({sl_price}) must be < Entry ({entry_price})")
+    else:  # sell/short
+        if tp_price >= entry_price:
+            errors.append(f"SELL: TP ({tp_price}) must be < Entry ({entry_price})")
+        if sl_price <= entry_price:
+            errors.append(f"SELL: SL ({sl_price}) must be > Entry ({entry_price})")
     
-    if side.upper() == 'BUY':
-        m_sl = m_entry - m_dist_sl
-        m_tp = m_entry + m_dist_tp
-    else: # SELL
-        m_sl = m_entry + m_dist_sl
-        m_tp = m_entry - m_dist_tp
-        
-    m_rr = m_dist_tp / m_dist_sl if m_dist_sl > 0 else 0
+    if errors:
+        return {"is_valid": False, "errors": errors, "warnings": warnings, "risk_reward": 0}
     
-    scenarios['market'] = {
-        "entry": round(m_entry, precision),
-        "sl": round(m_sl, precision),
-        "tp": round(m_tp, precision),
-        "rr": round(m_rr, 2)
-    }
+    # 3. Calculate R:R
+    risk = abs(entry_price - sl_price)
+    reward = abs(tp_price - entry_price)
+    rr_ratio = reward / risk if risk > 0 else 0
     
-    # --- 2. LIQUIDITY HUNT SCENARIO (Passive) ---
-    # Entry: Limit Order at Market SL level (Sweeping the stops)
-    # SL: Baru (New Entry - Buffer)
-    # TP: Balik ke arah tren (Bisa pakai TP Market tadi atau dihitung ulang)
+    # 4. R:R validation
+    if rr_ratio < min_rr_ratio:
+        errors.append(f"Risk:Reward ({rr_ratio:.2f}) below minimum ({min_rr_ratio})")
     
-    # Logic: Kita pasang antrian jaring di tempat orang lain kena SL.
-    # Entry Hunt = SL Market (kurang lebih)
-    h_dist_entry_offset = atr * config.ATR_MULTIPLIER_SL # Jarak dari harga skrg ke "SL Orang"
+    # 5. Extreme distance check (SL > 10% from entry = suspicious)
+    sl_distance_pct = abs(entry_price - sl_price) / entry_price
+    if sl_distance_pct > 0.10:
+        warnings.append(f"SL very far from entry ({sl_distance_pct*100:.1f}%). Double check AI logic.")
     
-    # New Safety for Hunt (Buffer setelah kena sweep)
-    # config.TRAP_SAFETY_SL biasanya lebih kecil/ketat karena sudah dapat harga pucuk
-    h_dist_sl_safety = atr * config.TRAP_SAFETY_SL 
-    h_dist_tp_reward = atr * config.ATR_MULTIPLIER_TP1 # Kita samakan reward distance-nya
+    is_valid = len(errors) == 0
     
-    if side.upper() == 'BUY':
-        # Kita mau BUY di bawah (di harga SL Market Buy orang lain)
-        h_entry = price - h_dist_entry_offset 
-        h_sl = h_entry - h_dist_sl_safety
-        h_tp = h_entry + h_dist_tp_reward
-    else:
-        # Kita mau SELL di atas (di harga SL Market Sell orang lain)
-        h_entry = price + h_dist_entry_offset
-        h_sl = h_entry + h_dist_sl_safety
-        h_tp = h_entry - h_dist_tp_reward
-        
-    h_rr = h_dist_tp_reward / h_dist_sl_safety if h_dist_sl_safety > 0 else 0
-    
-    scenarios['liquidity_hunt'] = {
-        "entry": round(h_entry, precision),
-        "sl": round(h_sl, precision),
-        "tp": round(h_tp, precision),
-        "rr": round(h_rr, 2)
-    }
-    
-    return scenarios
-
-
-def calculate_dual_scenarios(price: float, atr: float, precision: int = 4) -> Dict[str, Any]:
-    """
-    Menghitung skenario trade untuk KEDUA arah (Long & Short) secara bersamaan.
-    Digunakan untuk membuat AI Prompt yang netral (tidak bias ke satu arah).
-    
-    Args:
-        price (float): Harga saat ini.
-        atr (float): Nilai ATR saat ini.
-        precision (int): Desimal untuk pembulatan harga.
-        
-    Returns:
-        dict: {
-            "long": {"market": {...}, "liquidity_hunt": {...}},
-            "short": {"market": {...}, "liquidity_hunt": {...}}
-        }
-    """
     return {
-        "long": calculate_trade_scenarios(price, atr, 'BUY', precision),
-        "short": calculate_trade_scenarios(price, atr, 'SELL', precision)
+        "is_valid": is_valid,
+        "errors": errors,
+        "warnings": warnings,
+        "risk_reward": round(rr_ratio, 2)
     }
 
 
