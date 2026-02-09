@@ -176,8 +176,8 @@ AI_REASONING_EXCLUDE = False      # True = reasoning tidak ditampilkan di respon
 AI_LOG_REASONING = True           # Catat proses reasoning ke log? (True/False)
 
 # Identitas Bot
-AI_APP_URL = "https://github.com/KaleksananBarqi/Bot-Trading-Easy-Peasy"
-AI_APP_TITLE = "Bot Trading Easy Peasy"
+AI_APP_URL = "https://github.com/KaleksananBarqi/Bot-Trading-Easy-Peasy-Full-AI"
+AI_APP_TITLE = "Bot Trading Easy Peasy Full AI"
 
 # Analisa Berita & Sentimen
 ENABLE_SENTIMENT_ANALYSIS = False          # Aktifkan analisa sentimen berita?
