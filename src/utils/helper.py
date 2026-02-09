@@ -2,6 +2,7 @@
 import logging
 import sys
 import os
+import html
 import requests
 import asyncio
 from datetime import datetime, timedelta, timezone
@@ -50,10 +51,11 @@ logger = setup_logger()
 # ==========================================
 # TELEGRAM NOTIFIER
 # ==========================================
-async def kirim_tele(pesan: str, alert: bool = False, channel: str = 'default') -> None:
+async def kirim_tele(pesan: str, alert: bool = False, channel: str = 'default', is_html: bool = False) -> None:
     """
     Kirim pesan ke Telegram.
     :param channel: 'default' (Sinyal Utama) atau 'sentiment' (Analisa Berita)
+    :param is_html: Jika True, pesan tidak akan di-escape (caller harus memastikan pesan aman).
     """
     try:
         prefix = "⚠️ <b>SYSTEM ALERT</b>\n" if alert else ""
@@ -74,9 +76,10 @@ async def kirim_tele(pesan: str, alert: bool = False, channel: str = 'default') 
                 # Mari kita gunakan fallback ke default agar info tidak hilang, tapi beri log warning.
         
         def send_request():
+            msg_body = pesan if is_html else html.escape(pesan)
             data = {
                 'chat_id': chat_id, 
-                'text': f"{prefix}{pesan}", 
+                'text': f"{prefix}{msg_body}",
                 'parse_mode': 'HTML'
             }
             # Message Thread ID hanya support di default channel biasanya, atau jika user set var khusus (belum ada).
@@ -107,16 +110,17 @@ async def kirim_tele(pesan: str, alert: bool = False, channel: str = 'default') 
     except Exception as e:
         logger.error(f"❌ Telegram Exception: {e}")
 
-def kirim_tele_sync(pesan):
+def kirim_tele_sync(pesan, is_html=False):
     """
     Fungsi khusus untuk kirim notif saat bot mati/crash.
     Menggunakan requests biasa (blocking) agar pesan pasti terkirim sebelum process kill.
     """
     try:
         url = f"https://api.telegram.org/bot{config.TELEGRAM_TOKEN}/sendMessage"
+        msg_body = pesan if is_html else html.escape(pesan)
         data = {
             'chat_id': config.TELEGRAM_CHAT_ID, 
-            'text': pesan, 
+            'text': msg_body,
             'parse_mode': 'HTML'
         }
         if config.TELEGRAM_MESSAGE_THREAD_ID:

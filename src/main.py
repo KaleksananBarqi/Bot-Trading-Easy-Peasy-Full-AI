@@ -98,7 +98,7 @@ async def main():
     })
     if config.PAKAI_DEMO: exchange.enable_demo_trading(True)
 
-    await kirim_tele("🤖 <b>BOT TRADING STARTED</b>\nAI-Hybrid System Online.", alert=True)
+    await kirim_tele("🤖 <b>BOT TRADING STARTED</b>\nAI-Hybrid System Online.", alert=True, is_html=True)
 
     # 2. SETUP MODULES
     market_data = MarketDataManager(exchange)
@@ -139,8 +139,9 @@ async def main():
                 await executor.remove_from_tracker(sym)
                 await kirim_tele(
                     f"🗑️ <b>ORDER CANCELED</b>\n"
-                    f"Order {sym} dibatalkan secara manual.\n"
-                    f"Tracker cleaned."
+                    f"Order {html.escape(sym)} dibatalkan secara manual.\n"
+                    f"Tracker cleaned.",
+                    is_html=True
                 )
             else:
                 # Not our tracked order (could be SL/TP or other) - just log
@@ -158,8 +159,9 @@ async def main():
                 await executor.remove_from_tracker(sym)
                 await kirim_tele(
                     f"⏰ <b>ORDER EXPIRED</b>\n"
-                    f"Limit Order {sym} kadaluarsa (timeout).\n"
-                    f"Tracker cleaned."
+                    f"Limit Order {html.escape(sym)} kadaluarsa (timeout).\n"
+                    f"Tracker cleaned.",
+                    is_html=True
                 )
             else:
                 logger.debug(f"🔔 Order expired (non-entry): {sym} ID {order_id}")
@@ -206,15 +208,15 @@ async def main():
                 roi_icon = "🔥" if roi_percent > 0 else "🩸"
                 
                 msg = (
-                        f"{emoji} <b>{title}</b>\n"
-                        f"✨ <b>{symbol}</b>\n"
-                        f"🏷️ Type: {order_type}\n"
+                        f"{emoji} <b>{html.escape(title)}</b>\n"
+                        f"✨ <b>{html.escape(symbol)}</b>\n"
+                        f"🏷️ Type: {html.escape(order_type)}\n"
                         f"📏 Size: ${size_closed_usdt:.2f}\n" 
                         f"💵 Price: {price}\n"
-                        f"💸 PnL: <b>{pnl_str}</b>\n"
+                        f"💸 PnL: <b>{html.escape(pnl_str)}</b>\n"
                         f"{roi_icon} ROI: <b>{roi_percent:+.2f}%</b>"
                     )
-                await kirim_tele(msg)
+                await kirim_tele(msg, is_html=True)
                 
                 # Clean up tracker immediately
                 await executor.remove_from_tracker(symbol)
@@ -256,17 +258,17 @@ async def main():
                      
                      msg = (
                         f"✅ <b>LIMIT ENTRY FILLED</b>\n"
-                        f"✨ <b>{sym}</b>\n"
-                        f"🏷️ Type: {order_type}\n"
-                        f"🚀 Side: {side_filled}\n"
+                        f"✨ <b>{html.escape(sym)}</b>\n"
+                        f"🏷️ Type: {html.escape(order_type)}\n"
+                        f"🚀 Side: {html.escape(side_filled)}\n"
                         f"📏 Size: ${size_usdt:.2f}\n"
                         f"💵 Price: {price_filled}\n\n"
                         f"🎯 <b>Safety Orders:</b>\n"
-                        f"• TP: {tp_str}\n"
-                        f"• SL: {sl_str}\n"
-                        f"• R:R: {rr_str}"
+                        f"• TP: {html.escape(tp_str)}\n"
+                        f"• SL: {html.escape(sl_str)}\n"
+                        f"• R:R: {html.escape(rr_str)}"
                      )
-                     await kirim_tele(msg)
+                     await kirim_tele(msg, is_html=True)
 
             # Trigger safety check immediately
             await executor.sync_positions()
@@ -331,16 +333,16 @@ async def main():
                             elif score < config.SENTIMENT_BEARISH_THRESHOLD: icon = "🐻"
                             
                             msg = (
-                                f"📢 <b>PASAR SAAT INI {mood} {icon}</b>\n"
+                                f"📢 <b>PASAR SAAT INI {html.escape(mood)} {html.escape(icon)}</b>\n"
                                 f"Score: {score}/100\n\n"
-                                f"📝 <b>Ringkasan:</b>\n{summary}\n\n"
-                                f"🔑 <b>Faktor Utama:</b>\n{drivers_str}\n\n"
-                                f"⚠️ <b>Risk Assessment:</b>\n{risk}\n\n"
-                                f"<i>Analisa ini digenerate otomatis oleh AI ({config.AI_SENTIMENT_MODEL})</i>"
+                                f"📝 <b>Ringkasan:</b>\n{html.escape(summary)}\n\n"
+                                f"🔑 <b>Faktor Utama:</b>\n{html.escape(drivers_str)}\n\n"
+                                f"⚠️ <b>Risk Assessment:</b>\n{html.escape(risk)}\n\n"
+                                f"<i>Analisa ini digenerate otomatis oleh AI ({html.escape(config.AI_SENTIMENT_MODEL)})</i>"
                             )
                             
                             logger.info(f"📤 SENTIMENT TELEGRAM MESSAGE:\n{msg}")
-                            await kirim_tele(msg, channel='sentiment')
+                            await kirim_tele(msg, channel='sentiment', is_html=True)
                             logger.info("✅ Sentiment Report Sent.")
                     except Exception as e:
                         logger.error(f"❌ Sentiment Loop Error: {e}")
@@ -529,13 +531,14 @@ async def main():
                     logger.error(f"❌ AI tidak memberikan setup lengkap untuk {symbol}. ORDER DIBATALKAN.")
                     await kirim_tele(
                         f"❌ <b>AI SETUP INCOMPLETE</b>\n"
-                        f"{symbol}\n\n"
+                        f"{html.escape(symbol)}\n\n"
                         f"AI gagal memberikan entry/TP/SL yang lengkap.\n"
                         f"Entry: {entry_price}\n"
                         f"TP: {tp_price}\n"
                         f"SL: {sl_price}\n\n"
                         f"Order dibatalkan untuk keamanan.",
-                        alert=True
+                        alert=True,
+                        is_html=True
                     )
                     continue  # Skip execution
 
@@ -552,13 +555,15 @@ async def main():
 
                 if not validation['is_valid']:
                     logger.error(f"❌ AI Setup INVALID for {symbol}: {validation['errors']}")
+                    errors_msg = "\n".join([f"• {html.escape(e)}" for e in validation['errors']])
                     await kirim_tele(
                         f"❌ <b>AI SETUP VALIDATION FAILED</b>\n"
-                        f"{symbol}\n\n"
+                        f"{html.escape(symbol)}\n\n"
                         f"Errors:\n" +
-                        "\n".join([f"• {e}" for e in validation['errors']]) +
+                        errors_msg +
                         f"\n\nOrder dibatalkan.",
-                        alert=True
+                        alert=True,
+                        is_html=True
                     )
                     continue  # Skip execution
 
@@ -620,14 +625,14 @@ async def main():
                     type_str = "🚀 AGGRESSIVE (MARKET)" if order_type == 'market' else "🪤 PASSIVE (LIMIT)"
                     
                     msg = (f"🧠 <b>AI SIGNAL MATCHED</b>\n"
-                           f"{type_str} | 🤖 AI-Calculated\n\n"
-                           f"Coin: {symbol}\n"
-                           f"Signal: {direction_icon} {decision} ({confidence}%)\n"
-                           f"Timeframe: {config.TIMEFRAME_EXEC}\n"
-                           f"{btc_lines}"
-                           f"Strategy: {strategy_mode}\n\n"
+                           f"{html.escape(type_str)} | 🤖 AI-Calculated\n\n"
+                           f"Coin: {html.escape(symbol)}\n"
+                           f"Signal: {direction_icon} {html.escape(decision)} ({confidence}%)\n"
+                           f"Timeframe: {html.escape(config.TIMEFRAME_EXEC)}\n"
+                           f"{html.escape(btc_lines)}"
+                           f"Strategy: {html.escape(strategy_mode)}\n\n"
                            f"🛒 <b>Order Details (AI Setup):</b>\n"
-                           f"• Type: {order_type.upper()}\n"
+                           f"• Type: {html.escape(order_type.upper())}\n"
                            f"• Entry: {entry_price:.4f}\n"
                            f"• TP: {tp_price:.4f}\n"
                            f"• SL: {sl_price:.4f}\n"
@@ -637,12 +642,12 @@ async def main():
                            f"• Jika SL: <b>-${pnl_est['loss_usdt']:.2f}</b> (-{pnl_est['loss_percent']:.2f}%)\n\n"
                            f"💰 <b>Size:</b> ${amount_usdt} (x{config.LEVERAGE_DEFAULT})\n\n"
                            f"📝 <b>Reason:</b>\n"
-                           f"{reason}\n\n"
+                           f"{html.escape(reason)}\n\n"
                            f"⚠️ <b>Disclaimer:</b>\n"
                            f"• Setup FULLY AI-driven. Validated R:R > {config.MIN_RISK_REWARD_RATIO}.\n"
-                           f"• Model: {config.AI_MODEL_NAME}")
+                           f"• Model: {html.escape(config.AI_MODEL_NAME)}")
                            
-                    await kirim_tele(msg)
+                    await kirim_tele(msg, is_html=True)
                     
                     # Cooldown
                     # ... (existing cooldown logic) ...
@@ -666,4 +671,5 @@ if __name__ == "__main__":
         kirim_tele_sync("🛑 Bot Stopped Manually")
     except Exception as e:
         print(f"💀 Fatal Crash: {e}")
+        # Default is_html=False escapes the message automatically
         kirim_tele_sync(f"💀 Bot Crash: {e}")

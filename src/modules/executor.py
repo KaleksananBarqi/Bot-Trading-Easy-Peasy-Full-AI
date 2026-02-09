@@ -2,6 +2,7 @@ import asyncio
 import time
 import json
 import os
+import html
 import ccxt.async_support as ccxt
 import config
 from src.utils.helper import logger, kirim_tele
@@ -185,7 +186,10 @@ class OrderExecutor:
                     "ai_tp_price": tp_price
                 }
                 await self.save_tracker()
-                await kirim_tele(f"⏳ <b>LIMIT PLACED ({strategy_tag})</b>\n{symbol} {side} @ {price_exec:.4f}\n(Trap SL set by ATR: {atr_value:.4f})")
+                await kirim_tele(
+                    f"⏳ <b>LIMIT PLACED ({html.escape(strategy_tag)})</b>\n{html.escape(symbol)} {html.escape(side)} @ {price_exec:.4f}\n(Trap SL set by ATR: {atr_value:.4f})",
+                    is_html=True
+                )
 
             else: # MARKET
                 # [FIX RACE CONDITION]
@@ -203,7 +207,10 @@ class OrderExecutor:
 
                 try:
                     order = await self.exchange.create_order(symbol, 'market', side, qty)
-                    await kirim_tele(f"✅ <b>MARKET FILLED</b>\n{symbol} {side} (Size: ${amount_usdt*leverage:.2f})")
+                    await kirim_tele(
+                        f"✅ <b>MARKET FILLED</b>\n{html.escape(symbol)} {html.escape(side)} (Size: ${amount_usdt*leverage:.2f})",
+                        is_html=True
+                    )
                 except Exception as e:
                     # [ROLLBACK] Jika order gagal, hapus dari tracker
                     logger.error(f"❌ Market Order Failed {symbol}, rolling back tracker...")
@@ -214,7 +221,11 @@ class OrderExecutor:
 
         except Exception as e:
             logger.error(f"❌ Entry Failed {symbol}: {e}")
-            await kirim_tele(f"❌ <b>ENTRY ERROR</b>\n{symbol}: {e}", alert=True)
+            await kirim_tele(
+                f"❌ <b>ENTRY ERROR</b>\n{html.escape(symbol)}: {html.escape(str(e))}",
+                alert=True,
+                is_html=True
+            )
 
     # --- SAFETY ORDERS (SL/TP) ---
     async def install_safety_orders(self, symbol, pos_data):
@@ -383,7 +394,10 @@ class OrderExecutor:
         await self.save_tracker()
         
         logger.info(f"🔄 Trailing Mode ACTIVATED for {symbol} @ {current_price} | SL: {new_sl:.4f}")
-        await kirim_tele(f"🔄 <b>TRAILING ACTIVE</b>\n{symbol}\nPrice: {current_price}\nInitial SL: {new_sl:.4f} (Locked)")
+        await kirim_tele(
+            f"🔄 <b>TRAILING ACTIVE</b>\n{html.escape(symbol)}\nPrice: {current_price}\nInitial SL: {new_sl:.4f} (Locked)",
+            is_html=True
+        )
         
         # 3. Apply to Exchange
         await self._amend_sl_order(symbol, new_sl, side)
@@ -583,8 +597,9 @@ class OrderExecutor:
                         
                         await kirim_tele(
                             f"⏰ <b>ORDER EXPIRED</b>\n"
-                            f"Limit Order {symbol} dibatalkan karena timeout > {config.LIMIT_ORDER_EXPIRY_SECONDS/3600:.1f} jam.\n"
-                            f"Tracker cleaned."
+                            f"Limit Order {html.escape(symbol)} dibatalkan karena timeout > {config.LIMIT_ORDER_EXPIRY_SECONDS/3600:.1f} jam.\n"
+                            f"Tracker cleaned.",
+                            is_html=True
                         )
                         return # Skip further checks since we removed it
                     
@@ -610,8 +625,9 @@ class OrderExecutor:
 
                             await kirim_tele(
                                 f"🗑️ <b>ORDER SYNC</b>\n"
-                                f"Order for {symbol} was cancelled manually/expired.\n"
-                                f"Tracker cleaned."
+                                f"Order for {html.escape(symbol)} was cancelled manually/expired.\n"
+                                f"Tracker cleaned.",
+                                is_html=True
                             )
 
                 except Exception as e:
