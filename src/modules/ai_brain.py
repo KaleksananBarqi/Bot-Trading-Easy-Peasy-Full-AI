@@ -46,6 +46,8 @@ class AIBrain:
         if not self.client:
             return {"decision": "WAIT", "confidence": 0, "reason": "AI Key Missing"}
 
+        logger.info(f"🧠 AI PROMPT SENT:\n{prompt_text}")
+
         try:
             # Generate Content
             completion = await self.client.chat.completions.create(
