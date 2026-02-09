@@ -239,14 +239,6 @@ class SentimentAnalyzer:
             elif is_btc_rel and len(btc_news) < btc_max:
                 btc_news.append(f"[BTC-CORR] {news}")
         
-        # Warning jika berita koin spesifik kurang dari minimum
-        # if len(coin_news) < coin_min:
-        #     from src.utils.helper import logger
-        #     logger.warning(
-        #         f"⚠️ Insufficient coin-specific news for {symbol} "
-        #         f"(found: {len(coin_news)}, required: {coin_min})"
-        #     )
-        
         # Gabungkan dengan urutan prioritas: Macro → Coin → BTC
         result = []
         result.extend(macro_news[:macro_max])
