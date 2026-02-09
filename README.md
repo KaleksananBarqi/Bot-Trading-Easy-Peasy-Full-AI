@@ -1,7 +1,7 @@
 # 🤖 Easy Peasy Trading Bot: AI Vision & Logic Sniper
 
 <div align="center">
-  <img width="1380" height="962" alt="Image" src="https://github.com/user-attachments/assets/17b117d9-5747-4170-9380-b2fbfa7169c1" />
+
 
   <br />
   
@@ -31,11 +31,11 @@ Dibangun di atas arsitektur **Triple AI Core**, bot ini tidak hanya menghitung a
 
 ## 🚀 Fitur Utama & Keunggulan
 
-### 1. ⚖️ Dual Execution Plan (Anti-Bias AI) - **NEW!**
-Bot tidak lagi menebak arah. Untuk setiap koin, bot menghitung dua skenario sekaligus:
-*   **Scenario A (Long Case)**: Jika market bullish, di mana titik entry, SL, dan TP terbaik?
-*   **Scenario B (Short Case)**: Jika market bearish, di mana titik entry, SL, dan TP terbaik?
-AI akan memilih skenario yang memiliki probabilitas tertinggi berdasarkan data, menghilangkan bias subjektif.
+### 1. ⚖️ Objective Market Analysis (Multi-Scenario Thinking) - **NEW!**
+Bot dirancang untuk menghilangkan bias emosional. Pada setiap analisa, AI diinstruksikan untuk:
+*   **Neutral Evaluation**: Menilai struktur market secara objektif (Bullish vs Bearish) tanpa asumsi awal.
+*   **Scenario Mapping**: Mengidentifikasi zona kunci untuk kedua kemungkinan (jika harga naik tembus R1 vs jika harga turun jebol S1).
+*   **Best Path Selection**: AI memilih **SATU** skenario dengan probabilitas tertinggi (High Probability Setup) untuk dieksekusi, atau memilih **WAIT** jika kondisi ambigu.
 
 ### 2. 👁️ Vision AI Pattern Recognition
 Integrasi Computer Vision yang canggih:
@@ -79,23 +79,39 @@ Bot menggunakan strategi **Liquidity Hunt Specialist** yang fokus mencari titik 
 3. **Entry saat Reversal**: Masuk posisi setelah konfirmasi pembalikan arah
 4. **Risk Terkontrol**: SL ketat di bawah swing low/high terdekat
 
-### 4. 🪙 Smart Per-Coin Configuration - **NEW!**
+### 4. 🤖 Full AI-Driven Trading Setup (AI-Only Mode) - **NEW!**
+Bot kini beroperasi dalam mode **Full AI-Driven**, di mana AI memiliki kendali penuh atas eksekusi trading:
+
+*   **AI Entry Determination**: AI menentukan `Entry Price` terbaik berdasarkan analisis teknikal & sentimen.
+*   **AI Take Profit (TP)**: AI menetapkan target profit yang realistis.
+*   **AI Stop Loss (SL)**: AI menentukan batas kerugian untuk menjaga risk management.
+
+**Validasi Setup AI (Safety First):**
+Sebelum eksekusi, sistem melakukan validasi ketat terhadap output AI:
+1.  **Logical Check**: Memastikan `TP > Entry > SL` (untuk Long) atau sebaliknya (untuk Short).
+2.  **Risk:Reward Ratio**: Setup ditolak jika R:R < `MIN_RISK_REWARD_RATIO` (Default: 1:1.5).
+3.  **SL Distance**: Warning jika SL terlalu jauh (> `MAX_SL_DISTANCE_PERCENT` dari entry).
+
+> **Note**: Jika AI gagal memberikan setup yang valid atau R:R terlalu kecil, order otomatis **DIBATALKAN** demi keamanan.
+
+### 5. 🪙 Smart Per-Coin Configuration - **NEW!**
 Setiap koin dalam daftar pantau dapat dikustomisasi secara spesifik:
 *   **Specific Keywords**: News filtering yang lebih akurat per aset.
 *   **BTC Correlation Toggle**: Opsi untuk mengikuti atau mengabaikan tren Bitcoin.
 *   **Custom Leverage & Margin**: Pengaturan risiko berbeda untuk setiap koin.
 
-### 5. 📑 Dynamic Prompt Generation
+### 6. 📑 Dynamic Prompt Generation
 Sistem prompt AI yang cerdas dan adaptif:
 *   **Toggle-able Market Orders**: Jika `ENABLE_MARKET_ORDERS = False`, AI hanya akan diberikan opsi Limit Order (Liquidity Hunt) untuk meminimalkan slippage dan fee.
 *   **Contextual Hiding**: Jika korelasi BTC rendah, data BTC akan disembunyikan agar AI fokus pada price action independen koin tersebut.
 
-### 6. 📢 Pro-Grade Notifications with ROI - **NEW!**
-Notifikasi Telegram yang mendetail:
-*   **ROI Calculation**: Menampilkan persentase keuntungan/kerugian berdasarkan modal dan leverage.
-*   **Real-time Updates**: Notifikasi saat order dipasang (Limit), saat terisi (Filled), dan saat menyentuh TP/SL.
+### 7. 📢 Pro-Grade Notifications with ROI - **NEW!**
+Notifikasi Telegram yang mendetail dan transparan:
+*   **Start-to-Finish Tracking**: Notifikasi saat Order Created (Limit), Filled (Entry), hingga TP/SL Hit.
+*   **Profit/Loss Estimation**: Estimasi potensi keuntungan (Green) dan kerugian (Red) ditampilkan sejak awal entry.
+*   **Realized ROI**: Kalkulasi ROI (%) akurat berdasarkan margin dan leverage saat posisi ditutup.
 
-### 7. 📰 Smart News Filtering System - **NEW!**
+### 8. 📰 Smart News Filtering System - **NEW!**
 Sistem filter berita cerdas yang memastikan AI hanya menerima informasi relevan:
 
 **Mekanisme Filtering:**
@@ -109,7 +125,7 @@ Sistem filter berita cerdas yang memastikan AI hanya menerima informasi relevan:
 *   ✅ Keyword customizable per koin di `config.py`
 *   ✅ Sumber berita dari 15+ RSS feeds internasional & Indonesia
 
-### 8. 🔄 Intelligent Trailing Stop Loss
+### 9. 🔄 Intelligent Trailing Stop Loss
 Sistem trailing stop otomatis yang mengunci profit saat market bergerak menguntungkan:
 
 **Cara Kerja:**
@@ -128,7 +144,7 @@ Harga turun ke $108.50 → SL tetap $108.18 (terkunci!)
 Harga turun ke $108.18 → Posisi ditutup dengan profit ~8%
 ```
 
-### 9. 📈 Multi-Timeframe Technical Analysis
+### 10. 📈 Multi-Timeframe Technical Analysis
 Arsitektur analisis 3-layer untuk presisi maksimal:
 
 | Layer | Timeframe | Fungsi | Indikator |
@@ -137,25 +153,25 @@ Arsitektur analisis 3-layer untuk presisi maksimal:
 | **SETUP** | 30M | Deteksi pola | MACD |
 | **EXECUTION** | 15M | Entry timing | RSI, StochRSI, Bollinger Bands |
 
-### 10. ❄️ Cooldown Anti-FOMO/Revenge Trading
+### 11. ❄️ Cooldown Anti-FOMO/Revenge Trading
 Mekanisme pendinginan otomatis setelah trade selesai:
 *   **Setelah PROFIT**: Jeda 1 jam sebelum re-entry di koin yang sama
 *   **Setelah LOSS**: Jeda 2 jam untuk mencegah revenge trading
 
-### 11. ⏰ Limit Order Expiry System
+### 12. ⏰ Limit Order Expiry System
 Pembersihan otomatis limit order yang tidak terisi:
 *   Order yang pending > 2 jam akan **auto-cancel**
 *   Mencegah order "zombie" yang menggantung
 *   Sinkronisasi real-time dengan exchange
 
-### 12. 🐋 On-Chain Whale Detection
+### 13. 🐋 On-Chain Whale Detection
 Deteksi transaksi whale secara real-time via WebSocket:
 *   Threshold: > $1,000,000 USDT
 *   Pelacakan per-koin (bukan global)
 *   Integrasi dengan Stablecoin Inflow dari DeFiLlama
 *   De-duplication untuk mencegah spam notifikasi
 
-### 13. 📚 Order Book Depth Analysis
+### 14. 📚 Order Book Depth Analysis
 Analisis kedalaman order book untuk deteksi buying/selling pressure:
 *   Range analisis: 2% dari current price
 *   Kalkulasi bid/ask volume dalam USDT
@@ -354,6 +370,18 @@ sudo systemctl status trading-bot
 
 ---
 
+### ⚙️ Konfigurasi Penting (`src/config.py`)
+Pastikan Anda menyesuaikan parameter berikut sesuai risk profile Anda:
+
+| Parameter | Deskripsi | Default |
+|-----------|-----------|---------|
+| `MIN_RISK_REWARD_RATIO` | Minimal rasio profit vs loss yang diterima AI | `1.5` |
+| `MAX_SL_DISTANCE_PERCENT` | Batas maksimal jarak Stop Loss dari Entry | `0.10` (10%) |
+| `AI_CONFIDENCE_THRESHOLD` | Minimal keyakinan AI untuk eksekusi | `70` (%) |
+| `ENABLE_MARKET_ORDERS` | `True` = Hajar Kanan (Cepat), `False` = Limit Only (Hemat Fee) | `False` |
+
+---
+
 ## 📊 Struktur Proyek
 
 ```text
@@ -367,7 +395,7 @@ sudo systemctl status trading-bot
  │    │    ├── 🗞️ sentiment.py          # Analisis Berita & RSS
  │    │    └── 🐋 onchain.py            # Deteksi Whale & Stablecoin Inflow
  │    ├── 📂 utils/              # Fungsi Pembantu
- │    │    ├── 🧮 calc.py               # Kalkulasi Dual Scenarios & Risk
+ │    │    ├── 🧮 calc.py               # Validasi AI Setup & Estimasi PnL
  │    │    ├── 📝 prompt_builder.py     # Konstruktor Prompt AI Dinamis
  │    │    └── 🛠️ helper.py             # Logger & Tele Utils
  │    ├── ⚙️ config.py                 # PUSAT KONFIGURASI
