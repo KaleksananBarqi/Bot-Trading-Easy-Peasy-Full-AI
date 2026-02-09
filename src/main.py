@@ -5,6 +5,17 @@ import asyncio
 import time
 import html
 import ccxt.async_support as ccxt
+
+# [FIX] Ensure Python Path finds local modules correctly
+import sys
+import os
+current_dir = os.path.dirname(os.path.abspath(__file__)) # src
+project_root = os.path.dirname(current_dir) # project root
+if project_root not in sys.path:
+    sys.path.insert(0, project_root) # Allow: from src.utils...
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)  # Allow: import config
+
 import config
 from src.utils.helper import logger, kirim_tele, kirim_tele_sync, parse_timeframe_to_seconds, get_next_rounded_time, get_coin_leverage
 from src.utils.prompt_builder import build_market_prompt, build_sentiment_prompt
