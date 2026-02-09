@@ -443,7 +443,7 @@ class MarketDataManager:
             try:
                 async with websockets.connect(url) as ws:
                     logger.info("✅ WebSocket Connected!")
-                    await kirim_tele("✅ <b>WebSocket System Online</b>")
+                    await kirim_tele("✅ <b>WebSocket System Online</b>", is_html=True)
                     self.last_heartbeat = time.time()
                     
                     while True:
