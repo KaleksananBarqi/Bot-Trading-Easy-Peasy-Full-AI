@@ -1,0 +1,13 @@
+# .gitignore
+config.json
+user_data/
+*.pem
+*.key
+venv/
+__pycache__/
+.env
+.json
+*.json
+.log
+*.log
+./bot_trading.log

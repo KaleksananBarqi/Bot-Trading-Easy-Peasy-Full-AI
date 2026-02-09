@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bot-trading-easy-peasy"
+version = "1.0.0"
+description = "Easy Peasy Trading Bot: AI Vision & Logic Sniper"
+readme = "README.md"
+license = { text = "PolyForm Noncommercial License 1.0.0" }
+authors = [
+    { name = "Kaleksanan Barqi Aji Massani" }
+]
+keywords = ["crypto", "trading", "bot", "ai", "vision", "logic-sniper"]
+requires-python = ">=3.10"
+dependencies = [
+    "aiohttp>=3.9.0",
+    "ccxt>=4.5.36",
+    "feedparser>=6.0.11",
+    "httpx>=0.28.1",
+    "matplotlib>=3.10.8",
+    "mplfinance>=0.12.10b0",
+    "numpy",
+    "openai>=2.16.0",
+    "pandas>=2.3.3",
+    "pandas_ta>=0.4.19b0",
+    "Pillow>=10.0.0",
+    "python-dotenv>=1.2.1",
+    "python-telegram-bot>=22.6",
+    "requests>=2.32.5",
+    "scipy>=1.11.0",
+    "seaborn>=0.13.2",
+    "websockets>=15.0.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*", "config*"]
