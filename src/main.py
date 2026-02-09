@@ -591,9 +591,11 @@ async def main():
                     if calc_size:
                         amount_usdt = calc_size
                     else:
-                         amount_usdt = config.POSITION_SIZE_USDT
+                        # Fallback: Cek amount spesifik per-koin, lalu default global
+                        amount_usdt = coin_cfg.get('amount', config.POSITION_SIZE_USDT)
                 else:
-                    amount_usdt = config.POSITION_SIZE_USDT
+                    # Static Mode: Gunakan amount spesifik per-koin dari DAFTAR_KOIN
+                    amount_usdt = coin_cfg.get('amount', config.POSITION_SIZE_USDT)
                 
                 # Calculate Estimated PnL (For Notification)
                 # FIX: Urutan argumen disesuaikan dengan definisi di calc.py
