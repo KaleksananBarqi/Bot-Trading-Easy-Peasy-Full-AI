@@ -371,4 +371,31 @@ DAFTAR_KOIN = [
         "btc_corr": False,
         "keywords": ["bitcoin", "btc"]
     },
+    {
+        "symbol": "ETH/USDT", 
+        "category": "L1", 
+        "leverage": 20, 
+        "margin_type": "isolated", 
+        "amount": 20, 
+        "btc_corr": True,
+        "keywords": ["bitcoin", "btc"]
+    },
+    {
+        "symbol": "SOL/USDT", 
+        "category": "L1", 
+        "leverage": 20, 
+        "margin_type": "isolated", 
+        "amount": 20, 
+        "btc_corr": True,
+        "keywords": ["bitcoin", "btc"]
+    },
+    {
+        "symbol": "ZEC/USDT", 
+        "category": "L1", 
+        "leverage": 20, 
+        "margin_type": "isolated", 
+        "amount": 20, 
+        "btc_corr": True,
+        "keywords": ["bitcoin", "btc"]
+    },
 ]
