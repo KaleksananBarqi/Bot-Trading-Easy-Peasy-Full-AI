@@ -447,14 +447,9 @@ async def main():
 
                 if use_btc_corr_config:
                     if show_btc_context:
-                        # High Correlation: Show BTC Data & Enforce Trend Following
-                        
-                        if tech_data['btc_trend'] == "BULLISH" and tech_data['price_vs_ema'] == "Above":
-                            is_interesting = True
-                        elif tech_data['btc_trend'] == "BEARISH" and tech_data['price_vs_ema'] == "Below":
-                            is_interesting = True
-                        else:
-                            pass  # Conflicting signal (e.g. BTC Bullish but Altcoin Below EMA) -> Skip
+                        # High Correlation: Show BTC Data & Let AI Decide
+                        # AI sudah punya TREND LOCK GATE yang handle conflicting signals
+                        is_interesting = True
                     else:
                         # Low Correlation: Hide BTC Data (Prevent Hallucination)
                         # Allow entry based on independent structure
