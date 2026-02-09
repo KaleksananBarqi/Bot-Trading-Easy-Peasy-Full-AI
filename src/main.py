@@ -241,26 +241,27 @@ async def main():
                      size_usdt = qty_filled * price_filled
                      
                      # Calculate TP/SL for Notification
+                     # [FIX] Ambil langsung dari tracker yang sudah simpan nilai AI
                      tracker = executor.safety_orders_tracker.get(sym, {})
-                     atr_val = tracker.get('atr_value', 0)
+                     ai_tp = tracker.get('ai_tp_price', 0)
+                     ai_sl = tracker.get('ai_sl_price', 0)
                      
                      tp_str = "-"
                      sl_str = "-"
                      rr_str = "-"
                      
-                     if atr_val > 0:
-                         dist_sl = atr_val * config.TRAP_SAFETY_SL
-                         dist_tp = atr_val * config.ATR_MULTIPLIER_TP1
+                     if ai_tp > 0 and ai_sl > 0:
+                         # Gunakan nilai AI langsung
+                         tp_str = f"{ai_tp:.4f}"
+                         sl_str = f"{ai_sl:.4f}"
                          
+                         # Hitung R:R dari AI setup
                          if side_filled.upper() == 'BUY':
-                             sl_p = price_filled - dist_sl
-                             tp_p = price_filled + dist_tp
-                         else: # SELL
-                             sl_p = price_filled + dist_sl
-                             tp_p = price_filled - dist_tp
-                             
-                         tp_str = f"{tp_p:.4f}"
-                         sl_str = f"{sl_p:.4f}"
+                             dist_tp = ai_tp - price_filled
+                             dist_sl = price_filled - ai_sl
+                         else:  # SELL
+                             dist_tp = price_filled - ai_tp
+                             dist_sl = ai_sl - price_filled
                          
                          rr = dist_tp / dist_sl if dist_sl > 0 else 0
                          rr_str = f"1:{rr:.2f}"
@@ -286,8 +287,29 @@ async def main():
         # Callback from Market Data (AggTrade)
         onchain.detect_whale(symbol, amount, side)
 
-    asyncio.create_task(market_data.start_stream(account_update_cb, order_update_cb, whale_handler))
-    asyncio.create_task(safety_monitor_loop())
+    # [FIX] Wrap background tasks dengan proper exception handler
+    async def safe_task_wrapper(coro, task_name):
+        """Wrapper untuk handle exception pada background tasks tanpa crash bot"""
+        while True:
+            try:
+                await coro
+            except asyncio.CancelledError:
+                logger.info(f"⛔ Task {task_name} cancelled.")
+                break
+            except Exception as e:
+                logger.error(f"❌ Task {task_name} crashed: {e}. Restarting in 5s...")
+                await asyncio.sleep(5)
+                # Recreate coroutine untuk restart
+                if task_name == "WebSocket Stream":
+                    coro = market_data.start_stream(account_update_cb, order_update_cb, whale_handler)
+                elif task_name == "Safety Monitor":
+                    coro = safety_monitor_loop()
+
+    asyncio.create_task(safe_task_wrapper(
+        market_data.start_stream(account_update_cb, order_update_cb, whale_handler),
+        "WebSocket Stream"
+    ))
+    asyncio.create_task(safe_task_wrapper(safety_monitor_loop(), "Safety Monitor"))
 
     logger.info("🚀 MAIN LOOP RUNNING...")
 
@@ -625,7 +647,7 @@ async def main():
                     # Notification
                     btc_lines = ""
                     if show_btc_context:
-                        btc_lines = f"BTC Corr: {tech_data['btc_correlation']:.2f}\n"
+                        btc_lines = f"BTC Corr: {btc_corr:.2f}\n"
 
                     direction_icon = "🟢" if decision == "BUY" else "🔴"
                     
