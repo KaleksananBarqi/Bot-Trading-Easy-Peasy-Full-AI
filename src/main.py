@@ -19,7 +19,7 @@ if current_dir not in sys.path:
 import config
 from src.utils.helper import logger, kirim_tele, kirim_tele_sync, parse_timeframe_to_seconds, get_next_rounded_time, get_coin_leverage
 from src.utils.prompt_builder import build_market_prompt, build_sentiment_prompt
-from src.utils.calc import calculate_profit_loss_estimation, validate_ai_setup
+from src.utils.calc import calculate_profit_loss_estimation, validate_ai_setup, calculate_trap_entry_setup
 
 # MODULE IMPORTS
 from src.modules.market_data import MarketDataManager
@@ -561,26 +561,48 @@ async def main():
                 exec_mode = ai_decision.get('execution_mode', 'MARKET').upper()
                 
                 # === Ambil setup dari AI ===
-                entry_price = float(ai_decision.get('entry_price', 0))
-                tp_price = float(ai_decision.get('tp_price', 0))
-                sl_price = float(ai_decision.get('sl_price', 0))
+                entry_price_ai = float(ai_decision.get('entry_price', 0))
+                tp_price_ai = float(ai_decision.get('tp_price', 0))
+                sl_price_ai = float(ai_decision.get('sl_price', 0))
+                
+                # === [TRAP ENTRY LOGIC] Override Entry dengan SL AI ===
+                # Simpan nilai asli untuk logging/notif
+                ai_original_entry = entry_price_ai
+                ai_original_tp = tp_price_ai
+                ai_original_sl = sl_price_ai
+                
+                # Hitung Setup Baru (Trap Entry)
+                atr_val = tech_data.get('atr', 1.0) # Fallback ATR if 0
+                if atr_val <= 0: atr_val = entry_price_ai * 0.01 # Fallback 1% if ATR missing
+                
+                trap_setup = calculate_trap_entry_setup(
+                    ai_sl_price=sl_price_ai, # Entry baru = SL AI
+                    side=side,
+                    atr_value=atr_val,
+                    atr_multiplier_tp=config.ATR_MULTIPLIER_TP1,
+                    atr_multiplier_sl=config.TRAP_SAFETY_SL
+                )
+                
+                # Override Variable Utama untuk Validasi & Eksekusi
+                entry_price = trap_setup['entry_price']
+                tp_price = trap_setup['tp_price']
+                sl_price = trap_setup['sl_price']
                 
                 # === [VALIDATION 1] Cek kelengkapan setup ===
-                if entry_price <= 0 or tp_price <= 0 or sl_price <= 0:
+                # Cek original AI dulu, karena itu sumber utamanya
+                if entry_price_ai <= 0 or tp_price_ai <= 0 or sl_price_ai <= 0:
                     logger.error(f"❌ AI tidak memberikan setup lengkap untuk {symbol}. ORDER DIBATALKAN.")
                     await kirim_tele(
                         f"❌ <b>AI SETUP INCOMPLETE</b>\n"
                         f"{symbol}\n\n"
                         f"AI gagal memberikan entry/TP/SL yang lengkap.\n"
-                        f"Entry: {entry_price}\n"
-                        f"TP: {tp_price}\n"
-                        f"SL: {sl_price}\n\n"
                         f"Order dibatalkan untuk keamanan.",
                         alert=True
                     )
                     continue  # Skip execution
 
-                # === [VALIDATION 2] Validasi logika setup ===
+                # === [VALIDATION 2] Validasi logika setup (TRAP ENTRY) ===
+                # Validasi dilakukan terhadap setup FINAL (Trap), bukan setup awal AI.
                 validation = validate_ai_setup(
                     entry_price=entry_price,
                     tp_price=tp_price,
@@ -673,20 +695,23 @@ async def main():
                            f"Timeframe: {config.TIMEFRAME_EXEC}\n"
                            f"{btc_lines}"
                            f"Strategy: {strategy_mode}\n\n"
-                           f"🛒 <b>Order Details (AI Setup):</b>\n"
-                           f"• Type: {order_type.upper()}\n"
+                           f"🤖 <b>AI Original Setup:</b>\n"
+                           f"• Entry: {ai_original_entry:.4f}\n"
+                           f"• TP: {ai_original_tp:.4f}\n"
+                           f"• SL: {ai_original_sl:.4f} (Used as Trap Entry)\n\n"
+                           f"🪤 <b>Trap Entry Setup (Final):</b>\n"
                            f"• Entry: {entry_price:.4f}\n"
                            f"• TP: {tp_price:.4f}\n"
                            f"• SL: {sl_price:.4f}\n"
                            f"• R:R: 1:{rr_ratio:.2f}\n\n"
-                           f"📈 <b>Estimasi Hasil:</b>\n"
+                           f"📈 <b>Estimasi Hasil (Trap):</b>\n"
                            f"• Jika TP: <b>+${pnl_est['profit_usdt']:.2f}</b> (+{pnl_est['profit_percent']:.2f}%)\n"
                            f"• Jika SL: <b>-${pnl_est['loss_usdt']:.2f}</b> (-{pnl_est['loss_percent']:.2f}%)\n\n"
                            f"💰 <b>Size:</b> ${amount_usdt} (x{config.LEVERAGE_DEFAULT})\n\n"
                            f"📝 <b>Reason:</b>\n"
                            f"{reason}\n\n"
                            f"⚠️ <b>Disclaimer:</b>\n"
-                           f"• Setup FULLY AI-driven. Validated R:R > {config.MIN_RISK_REWARD_RATIO}.\n"
+                           f"• Setup Trap Entry (Entry = AI SL).\n"
                            f"• Model: {config.AI_MODEL_NAME}")
                            
                     await kirim_tele(msg)

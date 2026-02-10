@@ -132,3 +132,53 @@ def calculate_profit_loss_estimation(
         "profit_percent": round(profit_percent, 2),
         "loss_percent": round(loss_percent, 2)
     }
+
+def calculate_trap_entry_setup(
+    ai_sl_price: float,
+    side: str,
+    atr_value: float,
+    atr_multiplier_tp: float,
+    atr_multiplier_sl: float
+) -> Dict[str, float]:
+    """
+    Hitung setup Trap Entry berdasarkan sl_price dari AI.
+    Entry baru = AI sl_price (zona likuiditas)
+    TP = entry ± ATR × atr_multiplier_tp
+    SL = entry ∓ ATR × atr_multiplier_sl
+    
+    Args:
+        ai_sl_price (float): Harga Stop Loss yang disarankan AI (akan jadi Entry).
+        side (str): 'BUY' atau 'SELL'.
+        atr_value (float): Nilai ATR saat ini.
+        atr_multiplier_tp (float): Multiplier ATR untuk Take Profit.
+        atr_multiplier_sl (float): Multiplier ATR untuk Stop Loss.
+        
+    Returns:
+        dict: {
+            'entry_price': float,
+            'tp_price': float,
+            'sl_price': float,
+            'dist_tp': float,
+            'dist_sl': float
+        }
+    """
+    entry_price = ai_sl_price
+    dist_tp = atr_value * atr_multiplier_tp
+    dist_sl = atr_value * atr_multiplier_sl
+
+    if side.upper() == 'BUY':
+        # Long: TP di atas, SL di bawah
+        tp_price = entry_price + dist_tp
+        sl_price = entry_price - dist_sl
+    else:  # SELL/SHORT
+        # Short: TP di bawah, SL di atas
+        tp_price = entry_price - dist_tp
+        sl_price = entry_price + dist_sl
+
+    return {
+        'entry_price': entry_price,
+        'tp_price': tp_price,
+        'sl_price': sl_price,
+        'dist_tp': dist_tp,
+        'dist_sl': dist_sl
+    }
