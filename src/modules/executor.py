@@ -185,7 +185,15 @@ class OrderExecutor:
                     "ai_tp_price": tp_price
                 }
                 await self.save_tracker()
-                await kirim_tele(f"⏳ <b>LIMIT PLACED ({strategy_tag})</b>\n{symbol} {side} @ {price_exec:.4f}\n(Trap SL set by ATR: {atr_value:.4f})")
+                
+                # [FIX Notifikasi] Tampilkan AI Setup jika ada, fallback ke ATR
+                if sl_price > 0 and tp_price > 0:
+                    detail = f"AI Setup — SL: {sl_price:.4f} | TP: {tp_price:.4f}"
+                else:
+                    detail = f"ATR: {atr_value:.4f}"
+                
+                await kirim_tele(f"⏳ <b>LIMIT PLACED ({strategy_tag})</b>\n{symbol} {side} @ {price_exec:.4f}\n({detail})")
+                return str(order['id'])
 
             else: # MARKET
                 # [FIX RACE CONDITION]
@@ -204,6 +212,7 @@ class OrderExecutor:
                 try:
                     order = await self.exchange.create_order(symbol, 'market', side, qty)
                     await kirim_tele(f"✅ <b>MARKET FILLED</b>\n{symbol} {side} (Size: ${amount_usdt*leverage:.2f})")
+                    return str(order['id'])
                 except Exception as e:
                     # [ROLLBACK] Jika order gagal, hapus dari tracker
                     logger.error(f"❌ Market Order Failed {symbol}, rolling back tracker...")

@@ -248,7 +248,21 @@ async def main():
                      sl_str = "-"
                      rr_str = "-"
                      
-                     if atr_val > 0:
+                     
+                     # [FIX-NOTIF-BUG-1] Start Check AI Setup First
+                     ai_sl = tracker.get('ai_sl_price', 0)
+                     ai_tp = tracker.get('ai_tp_price', 0)
+
+                     if ai_sl > 0 and ai_tp > 0:
+                         tp_str = f"{ai_tp:.4f}"
+                         sl_str = f"{ai_sl:.4f}"
+                         
+                         dist_tp = abs(ai_tp - price_filled)
+                         dist_sl = abs(ai_sl - price_filled)
+                         rr = dist_tp / dist_sl if dist_sl > 0 else 0
+                         rr_str = f"1:{rr:.2f}"
+                     
+                     elif atr_val > 0:
                          dist_sl = atr_val * config.TRAP_SAFETY_SL
                          dist_tp = atr_val * config.ATR_MULTIPLIER_TP1
                          
@@ -616,7 +630,11 @@ async def main():
                     price=entry_price,
                     amount_usdt=amount_usdt,
                     leverage=config.LEVERAGE_DEFAULT,
-                    strategy_tag=strategy_mode
+                    strategy_tag=strategy_mode,
+                    # [FIX-BUG-2B] Pass AI Params
+                    atr_value=tech_data.get('atr', 0),
+                    sl_price=sl_price,
+                    tp_price=tp_price
                 )
                 
                 if order_id:
