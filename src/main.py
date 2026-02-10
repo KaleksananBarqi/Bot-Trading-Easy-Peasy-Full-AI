@@ -711,8 +711,11 @@ async def main():
                            f"📝 <b>Reason:</b>\n"
                            f"{html.escape(reason)}\n\n"
                            f"⚠️ <b>Disclaimer:</b>\n"
+                           f"• DYOR (Do Your Own Research)\n"
+                           f"• SYUBI (Sayangi Uangmu Yang Berharga Itu)\n"
                            f"• Setup Trap Entry (Entry = AI SL).\n"
-                           f"• Model: {config.AI_MODEL_NAME}")
+                           f"• Model Logic: {config.AI_MODEL_NAME}\n"
+                           f"• Model Vision: {config.AI_VISION_MODEL}")
                            
                     await kirim_tele(msg)
                     

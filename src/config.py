@@ -188,7 +188,7 @@ SENTIMENT_PROVIDER = 'RSS_Feed'  # Sumber: 'RSS_Feed'
 
 # Analisa Visual (Chart Pattern)
 USE_PATTERN_RECOGNITION = True
-AI_VISION_MODEL = 'meta-llama/llama-4-maverick' # Model vision
+AI_VISION_MODEL = 'nvidia/nemotron-nano-12b-v2-vl:free' # Model vision
 AI_VISION_TEMPERATURE = 0.0
 AI_VISION_MAX_TOKENS = 300            # Naikkan untuk mencegah output terpotong
 
