@@ -560,7 +560,11 @@ async def main():
             
             if decision in ['BUY', 'SELL']:
                 if confidence < config.AI_CONFIDENCE_THRESHOLD:
-                    logger.info(f"⏭️ Skipped {symbol}: Low Confidence ({confidence}%)")
+                    # [NEW] COOLDOWN IF LOW CONFIDENCE
+                    # Agar tidak tanya terus-menerus di candle yang sama atau candle berikutnya
+                    timeframe_exec_seconds = parse_timeframe_to_seconds(config.TIMEFRAME_EXEC)
+                    executor.set_cooldown(symbol, timeframe_exec_seconds)
+                    logger.info(f"⏭️ Skipped {symbol}: Low Confidence ({confidence}%). Cooldown {timeframe_exec_seconds}s.")
                     continue
                     
                 side = decision.lower()
