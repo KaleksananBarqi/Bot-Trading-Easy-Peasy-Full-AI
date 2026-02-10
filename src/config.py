@@ -462,15 +462,6 @@ DAFTAR_KOIN = [
         "keywords": ["chainlink", "link"]
     },
     {
-        "symbol": "MATIC/USDT", 
-        "category": "L2", 
-        "leverage": 15, 
-        "margin_type": "isolated", 
-        "amount": 20, 
-        "btc_corr": True,
-        "keywords": ["polygon", "matic"]
-    },
-    {
         "symbol": "NEAR/USDT", 
         "category": "L1", 
         "leverage": 15, 
@@ -541,15 +532,6 @@ DAFTAR_KOIN = [
         "amount": 20, 
         "btc_corr": True,
         "keywords": ["filecoin", "fil"]
-    },
-    {
-        "symbol": "ICP/USDT", 
-        "category": "L1", 
-        "leverage": 15, 
-        "margin_type": "isolated", 
-        "amount": 20, 
-        "btc_corr": True,
-        "keywords": ["internet-computer", "icp"]
     },
     {
         "symbol": "ARB/USDT", 
