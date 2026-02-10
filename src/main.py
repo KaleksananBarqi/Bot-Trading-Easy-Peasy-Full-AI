@@ -541,6 +541,9 @@ async def main():
             # Call AI
             ai_decision = await ai_brain.analyze_market(prompt)
             
+            # [FIX] Update Timestamp segera setelah AI dipanggil (agar tidak looping di candle yang sama)
+            analyzed_candle_ts[symbol] = current_candle_ts
+            
             decision = ai_decision.get('decision', 'WAIT').upper()
             confidence = ai_decision.get('confidence', 0)
             reason = ai_decision.get('reason', 'No reason provided.')
@@ -725,8 +728,7 @@ async def main():
                     # Cooldown
                     # ... (existing cooldown logic) ...
         
-            # Update Timestamp (Candle ID) instead of System Time
-            analyzed_candle_ts[symbol] = current_candle_ts
+            # [MOVED UP] Update Timestamp (Candle ID) moved to after AI call
 
 
             # Rate Limit Protection
