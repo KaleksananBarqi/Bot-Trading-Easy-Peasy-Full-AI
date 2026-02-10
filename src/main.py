@@ -634,12 +634,13 @@ async def main():
                 # Prepare Execution Parameters
                 order_type = 'market' if exec_mode == 'MARKET' else 'limit'
                 
-                # Determine Position Size
-                balance = await executor.get_available_balance()
+                # --- ROI CALCULATION ---
+                # 1. Get Leverage from Config (Specific per Coin)
+                leverage = get_coin_leverage(symbol)
                 
                 # Check dynamic sizing logic if enabled
                 if config.USE_DYNAMIC_SIZE:
-                    calc_size = await executor.calculate_dynamic_amount_usdt(symbol, config.LEVERAGE_DEFAULT)
+                    calc_size = await executor.calculate_dynamic_amount_usdt(symbol, leverage)
                     if calc_size:
                         amount_usdt = calc_size
                     else:
@@ -658,7 +659,7 @@ async def main():
                     sl_price, 
                     side, 
                     amount_usdt, 
-                    config.LEVERAGE_DEFAULT
+                    leverage
                 )
                 rr_ratio = validation['risk_reward']
                 
@@ -669,7 +670,7 @@ async def main():
                     order_type=order_type,
                     price=entry_price,
                     amount_usdt=amount_usdt,
-                    leverage=config.LEVERAGE_DEFAULT,
+                    leverage=leverage,
                     strategy_tag=strategy_mode,
                     # [FIX-BUG-2B] Pass AI Params
                     atr_value=tech_data.get('atr', 0),
@@ -707,7 +708,9 @@ async def main():
                            f"📈 <b>Estimasi Hasil (Trap):</b>\n"
                            f"• Jika TP: <b>+${pnl_est['profit_usdt']:.2f}</b> (+{pnl_est['profit_percent']:.2f}%)\n"
                            f"• Jika SL: <b>-${pnl_est['loss_usdt']:.2f}</b> (-{pnl_est['loss_percent']:.2f}%)\n\n"
-                           f"💰 <b>Size:</b> ${amount_usdt} (x{config.LEVERAGE_DEFAULT})\n\n"
+                           f"💰 <b>Size & Risk:</b>\n"
+                           f"• Margin: ${amount_usdt:.2f}\n"
+                           f"• Size: ${(amount_usdt * leverage):.2f} (x{leverage})\n\n"
                            f"📝 <b>Reason:</b>\n"
                            f"{html.escape(reason)}\n\n"
                            f"⚠️ <b>Disclaimer:</b>\n"

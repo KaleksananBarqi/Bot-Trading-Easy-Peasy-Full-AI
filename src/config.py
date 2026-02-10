@@ -365,37 +365,289 @@ DAFTAR_KOIN = [
     {
         "symbol": "BTC/USDT", 
         "category": "KING", 
-        "leverage": 20, 
+        "leverage": 15, 
         "margin_type": "isolated", 
-        "amount": 25, 
+        "amount": 20, 
         "btc_corr": False,
         "keywords": ["bitcoin", "btc"]
     },
     {
         "symbol": "ETH/USDT", 
         "category": "L1", 
-        "leverage": 20, 
+        "leverage": 15, 
         "margin_type": "isolated", 
-        "amount": 25, 
+        "amount": 20, 
         "btc_corr": True,
         "keywords": ["ethereum", "eth"]
     },
     {
         "symbol": "SOL/USDT", 
         "category": "L1", 
-        "leverage": 20, 
+        "leverage": 15, 
         "margin_type": "isolated", 
-        "amount": 25, 
+        "amount": 20, 
         "btc_corr": True,
         "keywords": ["solana", "sol"]
     },
     {
         "symbol": "ZEC/USDT", 
         "category": "Privacy", 
-        "leverage": 20, 
+        "leverage": 15, 
         "margin_type": "isolated", 
-        "amount": 25, 
+        "amount": 20, 
         "btc_corr": False,
         "keywords": ["zcash", "zec"]
+    },
+    {
+        "symbol": "XRP/USDT", 
+        "category": "L1", 
+        "leverage": 15, 
+        "margin_type": "isolated", 
+        "amount": 20, 
+        "btc_corr": True,
+        "keywords": ["ripple", "xrp"]
+    },
+    {
+        "symbol": "DOGE/USDT", 
+        "category": "Meme", 
+        "leverage": 15, 
+        "margin_type": "isolated", 
+        "amount": 20, 
+        "btc_corr": True,
+        "keywords": ["dogecoin", "doge"]
+    },
+    {
+        "symbol": "ADA/USDT", 
+        "category": "L1", 
+        "leverage": 15, 
+        "margin_type": "isolated", 
+        "amount": 20, 
+        "btc_corr": True,
+        "keywords": ["cardano", "ada"]
+    },
+    {
+        "symbol": "AVAX/USDT", 
+        "category": "L1", 
+        "leverage": 15, 
+        "margin_type": "isolated", 
+        "amount": 20, 
+        "btc_corr": True,
+        "keywords": ["avalanche", "avax"]
+    },
+    {
+        "symbol": "TRX/USDT", 
+        "category": "L1", 
+        "leverage": 15, 
+        "margin_type": "isolated", 
+        "amount": 20, 
+        "btc_corr": True,
+        "keywords": ["tron", "trx"]
+    },
+    {
+        "symbol": "DOT/USDT", 
+        "category": "L1", 
+        "leverage": 15, 
+        "margin_type": "isolated", 
+        "amount": 20, 
+        "btc_corr": True,
+        "keywords": ["polkadot", "dot"]
+    },
+    {
+        "symbol": "LINK/USDT", 
+        "category": "Oracle", 
+        "leverage": 15, 
+        "margin_type": "isolated", 
+        "amount": 20, 
+        "btc_corr": True,
+        "keywords": ["chainlink", "link"]
+    },
+    {
+        "symbol": "MATIC/USDT", 
+        "category": "L2", 
+        "leverage": 15, 
+        "margin_type": "isolated", 
+        "amount": 20, 
+        "btc_corr": True,
+        "keywords": ["polygon", "matic"]
+    },
+    {
+        "symbol": "NEAR/USDT", 
+        "category": "L1", 
+        "leverage": 15, 
+        "margin_type": "isolated", 
+        "amount": 20, 
+        "btc_corr": True,
+        "keywords": ["near", "near-protocol"]
+    },
+    {
+        "symbol": "APT/USDT", 
+        "category": "L1", 
+        "leverage": 15, 
+        "margin_type": "isolated", 
+        "amount": 20, 
+        "btc_corr": True,
+        "keywords": ["aptos", "apt"]
+    },
+    {
+        "symbol": "SUI/USDT", 
+        "category": "L1", 
+        "leverage": 15, 
+        "margin_type": "isolated", 
+        "amount": 20, 
+        "btc_corr": True,
+        "keywords": ["sui", "sui-network"]
+    },
+    {
+        "symbol": "LTC/USDT", 
+        "category": "L1", 
+        "leverage": 15, 
+        "margin_type": "isolated", 
+        "amount": 20, 
+        "btc_corr": True,
+        "keywords": ["litecoin", "ltc"]
+    },
+    {
+        "symbol": "BCH/USDT", 
+        "category": "L1", 
+        "leverage": 15, 
+        "margin_type": "isolated", 
+        "amount": 20, 
+        "btc_corr": True,
+        "keywords": ["bitcoin-cash", "bch"]
+    },
+    {
+        "symbol": "XLM/USDT", 
+        "category": "L1", 
+        "leverage": 15, 
+        "margin_type": "isolated", 
+        "amount": 20, 
+        "btc_corr": True,
+        "keywords": ["stellar", "xlm"]
+    },
+    {
+        "symbol": "ATOM/USDT", 
+        "category": "L1", 
+        "leverage": 15, 
+        "margin_type": "isolated", 
+        "amount": 20, 
+        "btc_corr": True,
+        "keywords": ["cosmos", "atom"]
+    },
+    {
+        "symbol": "FIL/USDT", 
+        "category": "L1", 
+        "leverage": 15, 
+        "margin_type": "isolated", 
+        "amount": 20, 
+        "btc_corr": True,
+        "keywords": ["filecoin", "fil"]
+    },
+    {
+        "symbol": "ICP/USDT", 
+        "category": "L1", 
+        "leverage": 15, 
+        "margin_type": "isolated", 
+        "amount": 20, 
+        "btc_corr": True,
+        "keywords": ["internet-computer", "icp"]
+    },
+    {
+        "symbol": "ARB/USDT", 
+        "category": "L2", 
+        "leverage": 15, 
+        "margin_type": "isolated", 
+        "amount": 20, 
+        "btc_corr": True,
+        "keywords": ["arbitrum", "arb"]
+    },
+    {
+        "symbol": "OP/USDT", 
+        "category": "L2", 
+        "leverage": 15, 
+        "margin_type": "isolated", 
+        "amount": 20, 
+        "btc_corr": True,
+        "keywords": ["optimism", "op"]
+    },
+    {
+        "symbol": "ENS/USDT", 
+        "category": "L1", 
+        "leverage": 15, 
+        "margin_type": "isolated", 
+        "amount": 20, 
+        "btc_corr": True,
+        "keywords": ["ethereum-name-service", "ens"]
+    },
+    {
+        "symbol": "AAVE/USDT", 
+        "category": "DeFi", 
+        "leverage": 15, 
+        "margin_type": "isolated", 
+        "amount": 20, 
+        "btc_corr": True,
+        "keywords": ["aave", "aave-protocol"]
+    },
+    {
+        "symbol": "UNI/USDT", 
+        "category": "DeFi", 
+        "leverage": 15, 
+        "margin_type": "isolated", 
+        "amount": 20, 
+        "btc_corr": True,
+        "keywords": ["uniswap", "uni"]
+    },
+    {
+        "symbol": "LINK/USDT", 
+        "category": "Oracle", 
+        "leverage": 15, 
+        "margin_type": "isolated", 
+        "amount": 20, 
+        "btc_corr": True,
+        "keywords": ["chainlink", "link"]
+    },
+    {
+        "symbol": "GRT/USDT", 
+        "category": "Oracle", 
+        "leverage": 15, 
+        "margin_type": "isolated", 
+        "amount": 20, 
+        "btc_corr": True,
+        "keywords": ["the-graph", "grt"]
+    },
+    {
+        "symbol": "SNX/USDT", 
+        "category": "DeFi", 
+        "leverage": 15, 
+        "margin_type": "isolated", 
+        "amount": 20, 
+        "btc_corr": True,
+        "keywords": ["synthetix", "snx"]
+    },
+    {
+        "symbol": "MKR/USDT", 
+        "category": "DeFi", 
+        "leverage": 15, 
+        "margin_type": "isolated", 
+        "amount": 20, 
+        "btc_corr": True,
+        "keywords": ["maker", "mkr"]
+    },
+    {
+        "symbol": "COMP/USDT", 
+        "category": "DeFi", 
+        "leverage": 15, 
+        "margin_type": "isolated", 
+        "amount": 20, 
+        "btc_corr": True,
+        "keywords": ["compound", "comp"]
+    },
+    {
+        "symbol": "CRV/USDT", 
+        "category": "DeFi", 
+        "leverage": 15, 
+        "margin_type": "isolated", 
+        "amount": 20, 
+        "btc_corr": True,
+        "keywords": ["curve", "crv"]
     },
 ]
