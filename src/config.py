@@ -389,13 +389,4 @@ DAFTAR_KOIN = [
         "btc_corr": True,
         "keywords": ["solana", "sol"]
     },
-    {
-        "symbol": "ZEC/USDT", 
-        "category": "Privacy", 
-        "leverage": 15, 
-        "margin_type": "isolated", 
-        "amount": 20, 
-        "btc_corr": False,
-        "keywords": ["zcash", "zec"]
-    },
 ]
