@@ -223,7 +223,8 @@ class OrderExecutor:
 
         except Exception as e:
             logger.error(f"❌ Entry Failed {symbol}: {e}")
-            await kirim_tele(f"❌ <b>ENTRY ERROR</b>\n{symbol}: {e}", alert=True)
+            import html as html_module
+            await kirim_tele(f"❌ <b>ENTRY ERROR</b>\n{symbol}: {html_module.escape(str(e))}", alert=True)
 
     # --- SAFETY ORDERS (SL/TP) ---
     async def install_safety_orders(self, symbol, pos_data):

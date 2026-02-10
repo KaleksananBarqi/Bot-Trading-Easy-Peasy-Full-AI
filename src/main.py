@@ -367,17 +367,17 @@ async def main():
                             # Kirim ke Telegram Channel Sentiment
                             mood = result.get('overall_sentiment', 'UNKNOWN')
                             score = result.get('sentiment_score', 0)
-                            summary = result.get('summary', '-')
+                            summary = html.escape(result.get('summary', '-'))
                             drivers = result.get('key_drivers', [])
-                            risk = result.get('risk_assessment', 'N/A')
-                            drivers_str = "\n".join([f"• {d}" for d in drivers])
+                            risk = html.escape(result.get('risk_assessment', 'N/A'))
+                            drivers_str = "\n".join([f"• {html.escape(d)}" for d in drivers])
                             
                             icon = "😐"
                             if score > config.SENTIMENT_BULLISH_THRESHOLD: icon = "🚀"
                             elif score < config.SENTIMENT_BEARISH_THRESHOLD: icon = "🐻"
                             
                             msg = (
-                                f"📢 <b>PASAR SAAT INI {mood} {icon}</b>\n"
+                                f"📢 <b>PASAR SAAT INI {html.escape(str(mood))} {icon}</b>\n"
                                 f"Score: {score}/100\n\n"
                                 f"📝 <b>Ringkasan:</b>\n{summary}\n\n"
                                 f"🔑 <b>Faktor Utama:</b>\n{drivers_str}\n\n"
@@ -709,7 +709,7 @@ async def main():
                            f"• Jika SL: <b>-${pnl_est['loss_usdt']:.2f}</b> (-{pnl_est['loss_percent']:.2f}%)\n\n"
                            f"💰 <b>Size:</b> ${amount_usdt} (x{config.LEVERAGE_DEFAULT})\n\n"
                            f"📝 <b>Reason:</b>\n"
-                           f"{reason}\n\n"
+                           f"{html.escape(reason)}\n\n"
                            f"⚠️ <b>Disclaimer:</b>\n"
                            f"• Setup Trap Entry (Entry = AI SL).\n"
                            f"• Model: {config.AI_MODEL_NAME}")

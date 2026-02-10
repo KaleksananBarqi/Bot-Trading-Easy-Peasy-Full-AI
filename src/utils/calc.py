@@ -51,7 +51,7 @@ def validate_ai_setup(
     rr_ratio = reward / risk if risk > 0 else 0
     
     # 4. R:R validation
-    if rr_ratio < min_rr_ratio:
+    if round(rr_ratio, 4) < round(min_rr_ratio, 4):
         errors.append(f"Risk:Reward ({rr_ratio:.2f}) below minimum ({min_rr_ratio})")
     
     # 5. Extreme distance check (SL > 10% from entry = suspicious)
