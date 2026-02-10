@@ -109,7 +109,7 @@ DEFAULT_CORRELATION_HIGH = 0.99  # Nilai default jika data korrelasi belum ada
 # 🧠 KECERDASAN BUATAN (AI) & STRATEGI
 # ==============================================================================
 # Otak Utama (Decision Maker)
-AI_MODEL_NAME = 'deepseek/deepseek-v3.2'
+AI_MODEL_NAME = 'arcee-ai/trinity-large-preview:free'
 AI_TEMPERATURE = 0.0             # 0.0 = Logis & Konsisten, 1.0 = Kreatif & Halusinasi
 AI_CONFIDENCE_THRESHOLD = 70     # Minimal keyakinan (%) untuk berani eksekusi
 AI_SYSTEM_ROLE = f"""You are a Professional Crypto Strategy Selector. Your job is to analyze market data and SELECT the BEST strategy from the available options based on current conditions.
