@@ -195,9 +195,10 @@ def build_market_prompt(symbol, tech_data, sentiment_data, onchain_data, pattern
 [EXECUTION STRATEGY CALCULATION]
 Berdasarkan strategi yang kamu pilih, HITUNG sendiri angka-angka berikut:
 
-1. **ENTRY PRICE**: Dari mana kamu akan masuk posisi?
-   - Untuk MARKET order: Gunakan current price {format_price(price)}
-   - Untuk LIMIT order: Tentukan harga limit yang strategis (contoh: di area S1/R1 untuk liquidity hunt)
+1. **ENTRY PRICE (LIMIT ORDER ONLY)**: 
+   - Tentukan harga LIMIT yang strategis dan realistis untuk dijemput.
+   - PENTING: Jangan gunakan harga saat ini jika terlalu jauh dari support/resistance.
+   - Entry terbaik adalah saat pullback ke EMA atau retest level S1/R1.
 
 2. **STOP LOSS (SL)**: Harga stop loss yang ketat tapi aman
    - Gunakan ATR ({atr:.5f}) sebagai referensi volatilitas
@@ -320,8 +321,8 @@ RUMUS REFERENSI (kamu bebas modifikasi based on condition):
       ✓ USE IF: Price in no-man's land (between S1-R1) OR conflicting signals
 
 7. EXECUTION MODE:
-   {'- Market Order: Available for confirmed setups' if config.ENABLE_MARKET_ORDERS else '- Market Order: DISABLED by config'}
-   - Limit Order: Use pre-calculated entry from EXECUTION SCENARIOS.
+   - LIMIT ORDER ONLY.
+   - Use pre-calculated entry from EXECUTION SCENARIOS.
 """
 
     prompt = f"""
@@ -422,7 +423,7 @@ OUTPUT FORMAT (JSON ONLY):
     "price_vs_pivot": "BELOW_S1 / ABOVE_R1 / INSIDE_RANGE"
   }},
   "selected_strategy": "NAME OF STRATEGY",
-  "execution_mode": { '"MARKET" | "LIMIT"' if config.ENABLE_MARKET_ORDERS else '"LIMIT"' },
+  "execution_mode": "LIMIT",
   "decision": "BUY" | "SELL" | "WAIT",
   "entry_price": <float>,
   "tp_price": <float>,

@@ -171,8 +171,15 @@ class OrderExecutor:
             logger.info(f"🚀 EXECUTING: {symbol} | {side} | ${amount_usdt} | x{leverage} | ATR: {atr_value}")
 
             # 4. Create Order
-            if order_type.lower() == 'limit':
+            # FORCE LIMIT ORDER (Market Order Disabled)
+            if order_type.lower() != 'limit':
+                logger.warning(f"⚠️ Market Order requested for {symbol} but DISABLED. Converting to LIMIT.")
+                order_type = 'limit'
+
+            # Execute as LIMIT Order
+            try:
                 order = await self.exchange.create_order(symbol, 'limit', side, qty, price_exec)
+                
                 # Save to tracker as WAITING_ENTRY
                 self.safety_orders_tracker[symbol] = {
                     "status": "WAITING_ENTRY",
@@ -195,31 +202,9 @@ class OrderExecutor:
                 await kirim_tele(f"⏳ <b>LIMIT PLACED ({strategy_tag})</b>\n{symbol} {side} @ {price_exec:.4f}\n({detail})")
                 return str(order['id'])
 
-            else: # MARKET
-                # [FIX RACE CONDITION]
-                # Simpan metadata SEBELUM order dilempar supaya Safety Monitor
-                # langsung punya data ATR saat mendeteksi posisi baru.
-                self.safety_orders_tracker[symbol] = {
-                    "status": "PENDING", 
-                    "strategy": strategy_tag,
-                    "atr_value": atr_value,
-                    "ai_sl_price": sl_price,
-                    "ai_tp_price": tp_price,
-                    "created_at": time.time()
-                }
-                await self.save_tracker()
-
-                try:
-                    order = await self.exchange.create_order(symbol, 'market', side, qty)
-                    await kirim_tele(f"✅ <b>MARKET FILLED</b>\n{symbol} {side} (Size: ${amount_usdt*leverage:.2f})")
-                    return str(order['id'])
-                except Exception as e:
-                    # [ROLLBACK] Jika order gagal, hapus dari tracker
-                    logger.error(f"❌ Market Order Failed {symbol}, rolling back tracker...")
-                    if symbol in self.safety_orders_tracker:
-                        del self.safety_orders_tracker[symbol]
-                        await self.save_tracker()
-                    raise e
+            except Exception as e:
+                logger.error(f"❌ Limit Order Failed {symbol}: {e}")
+                raise e
 
         except Exception as e:
             logger.error(f"❌ Entry Failed {symbol}: {e}")

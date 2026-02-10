@@ -254,7 +254,7 @@ MAX_SL_DISTANCE_PERCENT = 0.10      # Maksimal jarak SL dari entry (10%)
 # ==============================================================================
 # 🎯 EKSEKUSI ORDER & TARGET PROFIT
 # ==============================================================================
-ENABLE_MARKET_ORDERS = False      # Izinkan Market Order (Hajar Kanan/Kiri)?
+
 LIMIT_ORDER_EXPIRY_SECONDS = 7200   # Batas waktu Limit Order pending (dihapus jika basi)
 
 # Stop Loss (SL) & Take Profit (TP) - Fallback/Default
