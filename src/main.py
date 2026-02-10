@@ -47,13 +47,15 @@ async def safety_monitor_loop():
     logger.info("🛡️ Safety Monitor Started")
     while True:
         try:
-            # 1. Sync & Cleanup Pending Orders
+            # 1. Sync Posisi First (Update Cache)
+            # Pastikan cache posisi paling update sebelum cek pending orders untuk hindari race condition
+            count = await executor.sync_positions()
+
+            # 2. Sync & Cleanup Pending Orders
+            # Cek apakah order masih ada di open orders atau sudah fill/cancel
             await executor.sync_pending_orders()
             
-            # 2. Sync Posisi vs Tracker (Housekeeping)
-            # Pastikan jika ada posisi manual/baru yang belum masuk tracker, kita amankan.
-            count = await executor.sync_positions()
-            
+            # 3. Check Unsecured Positions
             for base_sym, pos in executor.position_cache.items():
                 symbol = pos['symbol']
                 tracker = executor.safety_orders_tracker.get(symbol, {})
@@ -70,6 +72,9 @@ async def safety_monitor_loop():
                             "last_check": time.time()
                         })
                         await executor.save_tracker()
+            
+            # [FIX] Prevent Infinite Loop High CPU Usage
+            await asyncio.sleep(config.SAFETY_MONITOR_INTERVAL)
 
         except Exception as e:
             logger.error(f"Error Safety Loop: {e}")
@@ -666,7 +671,50 @@ async def main():
                 )
                 rr_ratio = validation['risk_reward']
                 
-                # Execute
+                # 1. Send Notification FIRST (Before Execution)
+                btc_lines = ""
+                if show_btc_context:
+                    btc_lines = f"BTC Corr: {btc_corr:.2f}\n"
+
+                direction_icon = "🟢" if decision == "BUY" else "🔴"
+                
+                # Execution Type Header
+                type_str = "🚀 AGGRESSIVE (MARKET)" if order_type == 'market' else "🪤 PASSIVE (LIMIT)"
+                
+                msg = (f"🧠 <b>AI SIGNAL MATCHED</b>\n"
+                       f"{type_str} | 🤖 AI-Calculated\n\n"
+                       f"Coin: {symbol}\n"
+                       f"Signal: {direction_icon} {decision} ({confidence}%)\n"
+                       f"Timeframe: {config.TIMEFRAME_EXEC}\n"
+                       f"{btc_lines}"
+                       f"Strategy: {strategy_mode}\n\n"
+                       f"🤖 <b>AI Original Setup:</b>\n"
+                       f"• Entry: {ai_original_entry:.4f}\n"
+                       f"• TP: {ai_original_tp:.4f}\n"
+                       f"• SL: {ai_original_sl:.4f} (Used as Trap Entry)\n\n"
+                       f"🪤 <b>Trap Entry Setup (Final):</b>\n"
+                       f"• Entry: {entry_price:.4f}\n"
+                       f"• TP: {tp_price:.4f}\n"
+                       f"• SL: {sl_price:.4f}\n"
+                       f"• R:R: 1:{rr_ratio:.2f}\n\n"
+                       f"📈 <b>Estimasi Hasil (Trap):</b>\n"
+                       f"• Jika TP: <b>+${pnl_est['profit_usdt']:.2f}</b> (+{pnl_est['profit_percent']:.2f}%)\n"
+                       f"• Jika SL: <b>-${pnl_est['loss_usdt']:.2f}</b> (-{pnl_est['loss_percent']:.2f}%)\n\n"
+                       f"💰 <b>Size & Risk:</b>\n"
+                       f"• Margin: ${amount_usdt:.2f}\n"
+                       f"• Size: ${(amount_usdt * leverage):.2f} (x{leverage})\n\n"
+                       f"📝 <b>Reason:</b>\n"
+                       f"{html.escape(reason)}\n\n"
+                       f"⚠️ <b>Disclaimer:</b>\n"
+                       f"• DYOR (Do Your Own Research)\n"
+                       f"• SYUBI (Sayangi Uangmu Yang Berharga Itu)\n"
+                       f"• Setup Trap Entry (Entry = AI SL).\n"
+                       f"• Model Logic: {config.AI_MODEL_NAME}\n"
+                       f"• Model Vision: {config.AI_VISION_MODEL}")
+                       
+                await kirim_tele(msg)
+                
+                # 2. Execute Order
                 order_id = await executor.execute_entry(
                     symbol=symbol,
                     side=side,
@@ -682,51 +730,8 @@ async def main():
                 )
                 
                 if order_id:
-                    # Notification
-                    btc_lines = ""
-                    if show_btc_context:
-                        btc_lines = f"BTC Corr: {btc_corr:.2f}\n"
-
-                    direction_icon = "🟢" if decision == "BUY" else "🔴"
-                    
-                    # Execution Type Header
-                    type_str = "🚀 AGGRESSIVE (MARKET)" if order_type == 'market' else "🪤 PASSIVE (LIMIT)"
-                    
-                    msg = (f"🧠 <b>AI SIGNAL MATCHED</b>\n"
-                           f"{type_str} | 🤖 AI-Calculated\n\n"
-                           f"Coin: {symbol}\n"
-                           f"Signal: {direction_icon} {decision} ({confidence}%)\n"
-                           f"Timeframe: {config.TIMEFRAME_EXEC}\n"
-                           f"{btc_lines}"
-                           f"Strategy: {strategy_mode}\n\n"
-                           f"🤖 <b>AI Original Setup:</b>\n"
-                           f"• Entry: {ai_original_entry:.4f}\n"
-                           f"• TP: {ai_original_tp:.4f}\n"
-                           f"• SL: {ai_original_sl:.4f} (Used as Trap Entry)\n\n"
-                           f"🪤 <b>Trap Entry Setup (Final):</b>\n"
-                           f"• Entry: {entry_price:.4f}\n"
-                           f"• TP: {tp_price:.4f}\n"
-                           f"• SL: {sl_price:.4f}\n"
-                           f"• R:R: 1:{rr_ratio:.2f}\n\n"
-                           f"📈 <b>Estimasi Hasil (Trap):</b>\n"
-                           f"• Jika TP: <b>+${pnl_est['profit_usdt']:.2f}</b> (+{pnl_est['profit_percent']:.2f}%)\n"
-                           f"• Jika SL: <b>-${pnl_est['loss_usdt']:.2f}</b> (-{pnl_est['loss_percent']:.2f}%)\n\n"
-                           f"💰 <b>Size & Risk:</b>\n"
-                           f"• Margin: ${amount_usdt:.2f}\n"
-                           f"• Size: ${(amount_usdt * leverage):.2f} (x{leverage})\n\n"
-                           f"📝 <b>Reason:</b>\n"
-                           f"{html.escape(reason)}\n\n"
-                           f"⚠️ <b>Disclaimer:</b>\n"
-                           f"• DYOR (Do Your Own Research)\n"
-                           f"• SYUBI (Sayangi Uangmu Yang Berharga Itu)\n"
-                           f"• Setup Trap Entry (Entry = AI SL).\n"
-                           f"• Model Logic: {config.AI_MODEL_NAME}\n"
-                           f"• Model Vision: {config.AI_VISION_MODEL}")
-                           
-                    await kirim_tele(msg)
-                    
-                    # Cooldown
-                    # ... (existing cooldown logic) ...
+                    # Order placed successfully
+                    pass
         
             # [MOVED UP] Update Timestamp (Candle ID) moved to after AI call
 

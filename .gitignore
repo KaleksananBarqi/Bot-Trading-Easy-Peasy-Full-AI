@@ -43,3 +43,4 @@ src/safety_tracker.json
 # macOS
 .DS_Store
 safety_tracker.json
+result.json
