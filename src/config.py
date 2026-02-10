@@ -367,8 +367,35 @@ DAFTAR_KOIN = [
         "category": "KING", 
         "leverage": 20, 
         "margin_type": "isolated", 
-        "amount": 20, 
+        "amount": 25, 
         "btc_corr": False,
         "keywords": ["bitcoin", "btc"]
+    },
+    {
+        "symbol": "ETH/USDT", 
+        "category": "L1", 
+        "leverage": 20, 
+        "margin_type": "isolated", 
+        "amount": 25, 
+        "btc_corr": True,
+        "keywords": ["ethereum", "eth"]
+    },
+    {
+        "symbol": "SOL/USDT", 
+        "category": "L1", 
+        "leverage": 20, 
+        "margin_type": "isolated", 
+        "amount": 25, 
+        "btc_corr": True,
+        "keywords": ["solana", "sol"]
+    },
+    {
+        "symbol": "ZEC/USDT", 
+        "category": "Privacy", 
+        "leverage": 20, 
+        "margin_type": "isolated", 
+        "amount": 25, 
+        "btc_corr": False,
+        "keywords": ["zcash", "zec"]
     },
 ]
